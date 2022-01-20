@@ -5,14 +5,17 @@ echo "Please provide pi-nbr"
 read pinbr
 address="inutiuser@inuti$pinbr"
 
+#Create temporary folder
+mkdir ~/temp
+
 #Transfer pub key
-scp ~/.ssh/id_rsa.pub "$address:~/temp"
+scp ~/.ssh/id_rsa.pub "$address:~/temp/key-temp"
 
 #start ssh sessions
 ssh $address < "LangGeNot5G"
 
 ##Authorize key
-cat ~/temp >> .ssh/authorized_keys
+cat ~/temp/key-temp >> .ssh/authorized_keys
 
 #Configurate git
 git config user.name $pinbr
@@ -25,6 +28,19 @@ git clone https://github.com/emilpedersenlundh/eitn30-project.git
 
 #fix permissions
 chmod -R u+x eitn30-project/
+
+#Install radio dependencies
+#C++ Library
+cd ~/temp
+wget http://tmrh20.github.io/RF24Installer/RPi/install.sh
+chmod u+x install.sh
+./install.sh
+
+
+#Python dependencies
+sudo apt-get install python3-dev libboost-python-dev python3-pip python3-rpi.gpio
+
+sudo ln -s $(ls /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3*.so | tail -1) /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3.so
 
 #Download python libraries
 python3 -m pip install --upgrade pip setuptools
