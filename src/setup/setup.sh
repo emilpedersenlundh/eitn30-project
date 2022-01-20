@@ -28,3 +28,6 @@ chmod -R u+x eitn30-project/
 
 #Download python libraries
 python3 -m pip install --upgrade pip setuptools
+
+#Setup virtual interface
+modprobe tun
