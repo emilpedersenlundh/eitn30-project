@@ -4,6 +4,9 @@
 echo "Please provide pi-nbr"
 read pinbr
 address="inutiuser@inuti$pinbr"
+ROOT_PATH="../"
+cd ROOT_PATH
+echo pwd
 
 #Create temporary folder
 mkdir ~/temp
@@ -31,6 +34,13 @@ chmod -R u+x eitn30-project/
 
 #Install radio dependencies
 #C++ Library
+#Check if exists, else install
+if [[ -f "~/" ]]
+then
+    echo "This file exists on your filesystem."
+else
+
+fi
 cd ~/temp
 wget http://tmrh20.github.io/RF24Installer/RPi/install.sh
 chmod u+x install.sh
