@@ -3,10 +3,11 @@
 #Read pi number for connecting via ssh
 echo "Please provide pi-nbr"
 read pinbr
-address="inutiuser@inuti$pinbr"
-ROOT_PATH="../"
-cd ROOT_PATH
-echo pwd
+address="inutiuser@inuti$pinbr.lab.eit.lth.se"
+ROOT_PATH=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+cd $ROOT_PATH
+cd ..
+pwd
 
 #Create temporary folder
 mkdir ~/temp
@@ -20,8 +21,8 @@ ssh $address < "LangGeNot5G"
 ##Authorize key
 cat ~/temp/key-temp >> .ssh/authorized_keys
 
-#Configurate git
-git config user.name $pinbr
+#Configure git
+git config user.name "internetinuti"
 git config user.email "lolxd@lolxd.com"
 
 #clone repo
@@ -31,6 +32,8 @@ git clone https://github.com/emilpedersenlundh/eitn30-project.git
 
 #fix permissions
 chmod -R u+x eitn30-project/
+
+cd ~git/eitn30-project/
 
 #Install radio dependencies
 #C++ Library
@@ -48,7 +51,7 @@ chmod u+x install.sh
 
 
 #Python dependencies
-sudo apt-get install python3-dev libboost-python-dev python3-pip python3-rpi.gpio
+sudo apt-get install -y python3-dev libboost-python-dev python3-pip python3-rpi.gpio
 
 sudo ln -s $(ls /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3*.so | tail -1) /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3.so
 
