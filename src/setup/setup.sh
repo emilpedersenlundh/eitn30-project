@@ -14,7 +14,7 @@ pwd
 #Create temporary folder
 mkdir ~/temp
 
-##BUG: Connecting via SSH works differently than what was assumed when writing the code below.
+##BUG: Connecting via SSH works differently than what was assumed when writing the code below. SSH needs to be passed the script to be run.
 #Transfer pub key
 scp ~/.ssh/id_rsa.pub "$address:~/temp/key-temp"
 
