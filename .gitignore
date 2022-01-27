@@ -1,3 +1,8 @@
+# RF24 related files
+RF24/
+rf24libs/
+src/rf24libs/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
