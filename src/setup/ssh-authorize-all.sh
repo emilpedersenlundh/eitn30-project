@@ -12,8 +12,6 @@ fi
 password="LangGeNot5G"
 pubkeypath="$HOME/.ssh/eitn30.pub"
 pubkeyname="eitn30.pub"
-authorize="cat ~/$pubkeyname >> ~/.ssh/authorized_keys; rm ~/$pubkeyname"
-
 ## Script
 
 # Set public key path
@@ -29,6 +27,7 @@ then
     # Set name of public key
     pubkeyname=$(basename $pubkeypath)
 fi
+authorize="cat ~/$pubkeyname >> ~/.ssh/authorized_keys; rm ~/$pubkeyname"
 
 # Dial to each machine and authorize user
 echo "Dialing to machines and authorizing public key."
