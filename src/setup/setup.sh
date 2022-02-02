@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-ROOT_PATH=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-cd $ROOT_PATH
-cd ..
+ROOT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 password="LangGeNot5G"
+repository="https://github.com/emilpedersenlundh/eitn30-project.git"
+repofolder=$( basename "$repository" .git)
 
 #Configure git
 git config --global user.name "InternetInutiPi$pinbr"
@@ -30,11 +30,8 @@ else
     git clone $repository
 fi
 
-#Fix permissions
-cd $HOME/git/
-chmod -R u+x $repofolder/
-cd $HOME/git/$repofolder/
-echo "Repository permissions set."
+#Update repository lists
+echo $password | sudo -S apt update
 
 ##Install radio dependencies
 #C++ Library
@@ -56,7 +53,6 @@ else
     echo "LibRF24 installed."
 fi
 
-echo $password | sudo -S apt update
 sudo apt-get install -y python3-dev libboost-python-dev python3-pip python3-rpi.gpio build-essentials
 sudo ln -s $(ls /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3*.so | tail -1) /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3.so
 
