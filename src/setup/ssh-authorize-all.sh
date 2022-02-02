@@ -14,6 +14,15 @@ pubkeypath="$HOME/.ssh/eitn30.pub"
 pubkeyname="eitn30.pub"
 ## Script
 
+#Progress bar function
+progress() {
+    local w=80 p=$1;  shift
+    # create a string of spaces, then change them to dots
+    printf -v dots "%*s" "$(( $p*$w/100 ))" ""; dots=${dots// /.};
+    # print those dots on a fixed-width space plus the percentage etc.
+    printf "\r\e[K|%-*s| %3d %% %s" "$w" "$dots" "$p" "$*";
+}
+
 # Set public key path
 read -p "Would you like to provide a custom public key path?[Y/n)" -n 1 -r
 echo    # (optional) move to a new line
@@ -36,7 +45,8 @@ do
     adress="inutiuser@inuti$i.lab.eit.lth.se"
     sshpass -p $password scp -q -o StrictHostKeyChecking=no $pubkeypath $adress:~/
     sshpass -p $password ssh -t -q -o StrictHostKeyChecking=no $adress $authorize
-done
+    progress "$(($((10#$i))*5))"
+done; echo
 
 echo
 echo "Script finished."
