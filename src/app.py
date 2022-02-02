@@ -12,6 +12,14 @@ from RF24 import RF24, RF24_PA_LOW
 SPI_SPEED = 2000000 #Hz
 LOCAL_ADDRESS = [] #Lägga in lokal ip
 
+LOCAL_PACKET = {
+    #Preamble
+    #Address
+    #Packet control field: Payload length, Packet ID, No ACK
+    #Payload
+    #CRC
+}
+
 SPI0 = {
     'MOSI':10,#dio.DigitalInOut(board.D10),
     'MISO':9,#dio.DigitalInOut(board.D9),
@@ -27,7 +35,8 @@ SPI1 = {
     'csn':dio.DigitalInOut(board.D18),
     }
 
-radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
+tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
+rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
 
 def transmit(address):
     print("Transmitter")
