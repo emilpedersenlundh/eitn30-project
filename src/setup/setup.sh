@@ -5,6 +5,7 @@ ROOT_PATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 password="LangGeNot5G"
 repository="https://github.com/emilpedersenlundh/eitn30-project.git"
 repofolder=$( basename "$repository" .git)
+pinbr="$(echo $HOSTNAME | tail -c 2)"
 
 #Configure git
 git config --global user.name "InternetInutiPi$pinbr"
@@ -40,16 +41,17 @@ then
     echo "LibRF24 exists on system. Skipping installation."
 else
     # Download latest release
+    cd $HOME/git/$repofolder/
     echo "Installing LibRF24."
     curl -s https://api.github.com/repos/nRF24/RF24/releases/latest \
     | grep "browser_download_url.*deb" \
-    | grep arm64 \
+    | grep armhf \
     | grep RPi \
     | cut -d '"' -f 4 \
     | wget -qi -
     # Install .deb
-    sudo dpkg -i $HOME/git/$repofolder/librf24-RPi*arm64.deb
-    rm $HOME/git/$repofolder/librf24-RPi*arm64.deb
+    sudo dpkg -i $HOME/git/$repofolder/librf24-RPi*armhf.deb
+    rm $HOME/git/$repofolder/librf24-RPi*armhf.deb
     echo "LibRF24 installed."
 fi
 
