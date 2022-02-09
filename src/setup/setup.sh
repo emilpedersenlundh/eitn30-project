@@ -12,7 +12,7 @@ git config --global user.name "InternetInutiPi$pinbr"
 git config --global user.email "notan@email.com"
 
 #Git repository installation
-if [[ -f "$HOME/git/" ]]
+if [[ -d "$HOME/git/" ]]
 then
     if [[ -f "$HOME/git/$repofolder/" ]]
     then
@@ -36,7 +36,7 @@ echo $password | sudo -S apt update
 
 ##Install radio dependencies
 #C++ Library
-if [[ -f "/usr/include/RF24/" ]]
+if [[ -d "/usr/include/RF24/" ]]
 then
     echo "LibRF24 exists on system. Skipping installation."
 else
@@ -50,12 +50,13 @@ else
     | cut -d '"' -f 4 \
     | wget -qi -
     # Install .deb
-    sudo dpkg -i $HOME/git/$repofolder/librf24-RPi*armhf.deb
+    packagename=$(ls $HOME/git/$repofolder/*armhf.deb)
+    sudo dpkg -i $packagename
     rm $HOME/git/$repofolder/librf24-RPi*armhf.deb
     echo "LibRF24 installed."
 fi
 
-sudo apt-get install -y python3-dev libboost-python-dev python3-pip python3-rpi.gpio build-essentials
+sudo apt-get install -y python3-dev libboost-python-dev python3-pip python3-rpi.gpio build-essential
 sudo ln -s $(ls /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3*.so | tail -1) /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3.so
 
 #Install Python3 setuptools globally
@@ -70,12 +71,12 @@ python3 setup.py build
 echo "Build complete."
 
 #Install and activate python virtual environment
-if [[ -f "$HOME/.envs/$repofolder/" ]]
+if [[ -d "$HOME/.envs/$repofolder/" ]]
 then
     echo "Python venv exists. Switching to environment."
     source $HOME/.envs/$repofolder/bin/activate
 else
-    if [[ -f "$HOME/.envs/" ]]
+    if [[ -d "$HOME/.envs/" ]]
     then
         echo "Python venv does not exist. Creating and activating."
         python3 -m venv $HOME/.envs/$repofolder
@@ -98,4 +99,4 @@ python3 setup.py install
 echo "Installation complete."
 
 ##Setup virtual interface
-#modprobe tun
+modprobe tun
