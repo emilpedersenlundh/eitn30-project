@@ -38,10 +38,17 @@ SPI1 = {
 tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
 rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
 
+
 def transmit(address):
+    tx_radio.stopListening()
     print("Transmitter")
 
 def receive(address, channel):
+    # Make sure all 6 pipes are open
+    # Start listening
+    # Timeout condition
+    # If has payload, read radio packet size
+    # Save payload to a buffer for each data pipe
     print("Receiver")
 
 def construct_packet(dest, data):
@@ -55,14 +62,14 @@ def construct_packet(dest, data):
         'TotLen':0, #2bytes
 
         'Identification':0, #2bytes
-        
+
         'Flags':0, #3bits
         'Fragment Offset':0, #13bits
 
         'TTL':0, #8bits
-        
+
         'Protocol':0, #8bits
-        
+
         'Source':0, #4bytes
 
         'Dest':0, #4bytes
@@ -102,7 +109,7 @@ def construct_packet(dest, data):
     data = data
 
 
-    
+
 
 def mode(userinput: str=""):
     mode = ""
