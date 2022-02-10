@@ -6,3 +6,7 @@ The functionality of the code is split in two. The first being connecting two di
 
 ## Application
 The second part, which utilizes the above mentioned connection, is a yet to be determined application.
+
+
+## Notes:
+NRF Module handles communication for L1-2, the control plane for L1-2 however has to be implemented by hand (e.g. controlled/random access, queueing, collision detection). As for the actual data handling, only L3 and above has to be implemented. Base functionality includes IP and ICMP(ping).

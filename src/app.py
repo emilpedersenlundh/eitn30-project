@@ -4,6 +4,8 @@ import time
 import struct
 import board
 import digitalio
+import requests
+import socket
 import numpy as np
 
 from matplotlib import use
@@ -34,6 +36,9 @@ SPI1 = {
     'ce':dio.DigitalInOut(board.D27),
     'csn':dio.DigitalInOut(board.D18),
     }
+
+
+### Implement separate socket server which listens to the virtual interface and relays packets (also implements sending packets, i.e. the reverse)
 
 tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
 rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
