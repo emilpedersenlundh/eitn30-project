@@ -38,6 +38,35 @@ SPI1 = {
 tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
 rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
 
+def setup():
+    # Initialize radio, if error: return runtime error
+    # Set power amplifier level
+    # Set channel
+    # Set payload size
+
+    print("Setup")
+
+## Control plane
+def discover():
+    # Announce self
+    # Listen for responses(account for collisions)
+    # Add to unauthenticated contacts array
+    print("Discover")
+
+def authenticate():
+    # Authenticate node (e.g. with PKI)
+    print("Authenticate")
+
+def associate():
+    # Add node to address array with lease timestamp
+    # If TDMA: Add to schedule, sync clocks
+    # Else apply random access scheme
+    print("Associate")
+
+def disassociate():
+    # If lease != expired: Inform node of disassociation
+    # Remove node from address array
+    print("Disassociate")
 
 def transmit(address):
     tx_radio.stopListening()
