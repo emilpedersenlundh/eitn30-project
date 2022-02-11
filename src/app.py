@@ -11,7 +11,7 @@ import numpy as np
 from matplotlib import use
 from RF24 import RF24, RF24_PA_LOW
 
-SPI_SPEED = 2000000 #Hz
+SPI_SPEED = 10000000 #Hz
 LOCAL_ADDRESS = [] #Lägga in lokal ip
 
 LOCAL_PACKET = {
@@ -46,8 +46,14 @@ rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
 def setup():
     # Initialize radio, if error: return runtime error
     # Set power amplifier level
+    # Set CRC encoding
+    # Set CRC enable/disable
+    # Set address width
+    # Set auto-retransmit delay
+    # Set auto-retransmit limit
     # Set channel
-    # Set payload size
+    # Set data rate
+    # Set payload size (dynamic/static)
 
     print("Setup")
 
