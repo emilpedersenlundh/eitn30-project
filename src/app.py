@@ -22,6 +22,12 @@ LOCAL_PACKET = {
     #CRC
 }
 
+#6 slots for addresses
+IP_TABLE = np.array([-1 for _ in range(6)])
+
+#Data buffer for all pipes in rx (128 bytes) 
+DATA_BUFFER = np.array([[np.int8 for _ in range(128)] for _ in range(len(IP_TABLE))])
+
 SPI0 = {
     'MOSI':10,#dio.DigitalInOut(board.D10),
     'MISO':9,#dio.DigitalInOut(board.D9),
@@ -79,16 +85,55 @@ def disassociate():
     # Remove node from address array
     print("Disassociate")
 
-def transmit(address):
-    tx_radio.stopListening()
-    print("Transmitter")
+def transmit(tx_radio, address):
+    tx_radio.open_tx_pipe(address)  # set address of RX node into a TX pipe
+    tx_radio.listen = False
+    tx_radio.channel = 1
+    count = 10
 
-def receive(address, channel):
+    status = []
+    buffer = np.random.bytes(32)
+
+    start = time.monotonic()
+    while count:
+        # use struct.pack to packetize your data
+        # into a usable payload
+
+        #buffer = struct.pack("<i", count)
+        # 'i' means a single 4 byte int value.
+        # '<' means little endian byte order. this may be optional
+        #print("Sending: {} as struct: {}".format(count, buffer))
+        result = tx_radio.send(buffer)
+        if not result:
+            #print("send() failed or timed out")
+            #print(tx_radio.what_happened())
+            status.append(False)
+        else:
+            #print("send() successful")
+            status.append(True)
+        # print timer results despite transmission success
+        count -= 1
+    total_time = time.monotonic() - start
+
+    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
+
+def receive(rx_radio, timeout):
     # Make sure all 6 pipes are open
+    for index, address in enumerate(IP_TABLE):
+        rx_radio.openReadingPipe(index, address)
     # Start listening
+    rx_radio.startListening()
+    start = time.time()
     # Timeout condition
-    # If has payload, read radio packet size
-    # Save payload to a buffer for each data pipe
+    while(time.time() - start < timeout):
+        #Checks if there are bytes available for read
+        payload_available, pipe_nbr = rx_radio.available_pipe()
+        if(payload_available):
+            # If has payload, read radio packet size
+            payload_size = rx_radio.getDynamicPayloadSize() 
+            datatest = rx_radio.read(payload_size)
+            DATA_BUFFER[pipe_nbr] = rx_radio.read(payload_size)
+            print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, datatest))
     print("Receiver")
 
 def construct_packet(dest, data):
