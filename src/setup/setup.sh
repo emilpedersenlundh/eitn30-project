@@ -38,6 +38,7 @@ echo $password | sudo -S apt update
 #C++ Library
 if [[ -d "/usr/include/RF24/" ]]
 then
+    #TODO: Remove old installation
     echo "LibRF24 exists on system. Skipping installation."
 else
     # Download latest release
@@ -56,7 +57,7 @@ else
     echo "LibRF24 installed."
 fi
 
-sudo apt-get install -y python3-dev libboost-python-dev python3-pip python3-rpi.gpio build-essential
+sudo apt-get install -y python3-dev libboost-python-dev python3-pip python3-rpi.gpio build-essential libatlas-base-dev
 sudo ln -s $(ls /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3*.so | tail -1) /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3.so
 
 #Install Python3 setuptools globally
@@ -99,4 +100,7 @@ python3 setup.py install
 echo "Installation complete."
 
 ##Setup virtual interface
-modprobe tun
+sudo modprobe tun
+
+#Configure SPI devices
+#TODO: Implement configuration of /boot/config.txt to start SPI devices correctly

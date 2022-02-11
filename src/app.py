@@ -1,14 +1,15 @@
+#!/home/fideloper/.envs/eitn30-project/bin/python3
+
+from ctypes import c_uint16
 import sys
 import argparse
 import time
 import struct
+import typing
 import board
 import digitalio
-import requests
-import socket
 import numpy as np
 
-from matplotlib import use
 from RF24 import RF24, RF24_PA_LOW
 
 SPI_SPEED = 10000000 #Hz
@@ -23,26 +24,25 @@ LOCAL_PACKET = {
 }
 
 #6 slots for addresses
-IP_TABLE = np.array([-1 for _ in range(6)])
+IP_TABLE = np.array([1 for _ in range(6)])
 
-#Data buffer for all pipes in rx (128 bytes) 
+#Data buffer for all pipes in rx (128 bytes)
 DATA_BUFFER = np.array([[np.int8 for _ in range(128)] for _ in range(len(IP_TABLE))])
 
-SPI0 = {
+SPI0: c_uint16 = {
     'MOSI':10,#dio.DigitalInOut(board.D10),
     'MISO':9,#dio.DigitalInOut(board.D9),
     'clock':11,#dio.DigitalInOut(board.D11),
-    'ce':digitalio.DigitalInOut(board.D17),
-    'csn':digitalio.DigitalInOut(board.D8),
+    'ce':17,#digitalio.DigitalInOut(board.D17),
+    'csn':8#digitalio.DigitalInOut(board.D8),
     }
-SPI1 = {
+SPI1: c_uint16 = {
     'MOSI':20,#dio.DigitalInOut(board.D10),
     'MISO':19,#dio.DigitalInOut(board.D9),
     'clock':21,#dio.DigitalInOut(board.D11),
-    'ce':dio.DigitalInOut(board.D27),
-    'csn':dio.DigitalInOut(board.D18),
+    'ce':27,#digitalio.DigitalInOut(board.D27),
+    'csn':18#digitalio.DigitalInOut(board.D18),
     }
-
 
 ### Implement separate socket server which listens to the virtual interface and relays packets (also implements sending packets, i.e. the reverse)
 
@@ -61,7 +61,8 @@ def setup():
     # Set data rate
     # Set payload size (dynamic/static)
 
-    print("Setup")
+    #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI0['csn'] , SPI0['ce'] , SPI_SPEED))
+    tx_radio.begin()
 
 ## Control plane
 def discover():
@@ -115,13 +116,15 @@ def transmit(tx_radio, address):
         count -= 1
     total_time = time.monotonic() - start
 
-    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
-
+    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), 32*8*len(status)/total_time))
+    #TODO: Replace ^ 32 with size
 def receive(rx_radio, timeout):
     # Make sure all 6 pipes are open
-    for index, address in enumerate(IP_TABLE):
-        rx_radio.openReadingPipe(index, address)
-    # Start listening
+    #index: bytes
+    #address: bytes
+    #for index, address in enumerate(IP_TABLE):
+    rx_radio.openReadingPipe(0, b"\x78" * 5)
+    # Start listening'
     rx_radio.startListening()
     start = time.time()
     # Timeout condition
@@ -130,7 +133,7 @@ def receive(rx_radio, timeout):
         payload_available, pipe_nbr = rx_radio.available_pipe()
         if(payload_available):
             # If has payload, read radio packet size
-            payload_size = rx_radio.getDynamicPayloadSize() 
+            payload_size = rx_radio.getDynamicPayloadSize()
             datatest = rx_radio.read(payload_size)
             DATA_BUFFER[pipe_nbr] = rx_radio.read(payload_size)
             print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, datatest))
@@ -207,7 +210,8 @@ def mode(userinput: str=""):
     return mode
 
 if __name__ == "__main__":
-    print("lol")
+
+    setup()
     dest_addr = 1
     runtime = 5000
     role = mode(sys.argv[0])
@@ -222,6 +226,3 @@ if __name__ == "__main__":
             start = time.time()
             receive(rx_radio, runtime)
         count -= 1
-
-    
-
