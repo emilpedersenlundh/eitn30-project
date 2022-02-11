@@ -198,14 +198,30 @@ def construct_packet(dest, data):
 
 def mode(userinput: str=""):
     mode = ""
-    if userinput == "TX" or userinput == "RX":
+    if userinput == "BASE" or userinput == "NODE":
         mode = userinput
     else:
-        print("No mode specified, defaulting to receiver..")
-        mode = "RX"
+        print("No mode specified, defaulting to NODE..")
+        mode = "NODE"
     print("Role = {}".format(mode))
     return mode
 
 if __name__ == "__main__":
     print("lol")
+    dest_addr = 1
+    runtime = 5000
     role = mode(sys.argv[0])
+    count = 3
+
+    while count:
+        if(role == "BASE"):
+            start = time.time()
+            while(time.time() - start < runtime):
+                transmit(tx_radio, dest_addr)
+        else:
+            start = time.time()
+            receive(rx_radio, runtime)
+        count -= 1
+
+    
+
