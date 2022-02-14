@@ -15,7 +15,7 @@ GPIO_TYPES = {
 
 def listFunctions():
     GPIO.setmode(GPIO.BCM)
-    for i in range(1, 41):
+    for i in range(1, 28):
         print("{}{}{}{}".format("Pin ", i, ": ", GPIO_TYPES[GPIO.gpio_function(i)]))
 
 if __name__ == "__main__":
