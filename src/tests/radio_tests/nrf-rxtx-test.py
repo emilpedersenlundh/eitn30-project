@@ -1,3 +1,5 @@
+#!/home/fideloper/.envs/eitn30-project/bin/python3
+
 from multiprocessing import Process
 from circuitpython_nrf24l01.rf24 import RF24
 import board

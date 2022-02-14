@@ -34,6 +34,11 @@ fi
 #Update repository lists
 echo $password | sudo -S apt update
 
+#SPI Setup
+#TODO: Add boot config check
+#TODO: Check available SPI devices
+sudo usermod -a -G spi inutiuser
+
 ##Install radio dependencies
 #C++ Library
 if [[ -d "/usr/include/RF24/" ]]

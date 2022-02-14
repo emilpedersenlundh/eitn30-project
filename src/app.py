@@ -1,6 +1,7 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
-from ctypes import c_uint16
+from ast import Bytes
+from ctypes import c_byte, c_uint16, c_uint32
 import sys
 import argparse
 import time
@@ -9,6 +10,7 @@ import typing
 import board
 import digitalio
 import numpy as np
+import RPi.GPIO as GPIO
 
 from RF24 import RF24, RF24_PA_LOW
 
@@ -30,6 +32,7 @@ IP_TABLE = np.array([1 for _ in range(6)])
 DATA_BUFFER = np.array([[np.int8 for _ in range(128)] for _ in range(len(IP_TABLE))])
 
 SPI0: c_uint16 = {
+    'SPI':0,
     'MOSI':10,#dio.DigitalInOut(board.D10),
     'MISO':9,#dio.DigitalInOut(board.D9),
     'clock':11,#dio.DigitalInOut(board.D11),
@@ -37,6 +40,7 @@ SPI0: c_uint16 = {
     'csn':8#digitalio.DigitalInOut(board.D8),
     }
 SPI1: c_uint16 = {
+    'SPI':10,
     'MOSI':20,#dio.DigitalInOut(board.D10),
     'MISO':19,#dio.DigitalInOut(board.D9),
     'clock':21,#dio.DigitalInOut(board.D11),
@@ -46,8 +50,15 @@ SPI1: c_uint16 = {
 
 ### Implement separate socket server which listens to the virtual interface and relays packets (also implements sending packets, i.e. the reverse)
 
-tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
-rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
+#tx_radio = RF24(SPI0['SPI'],SPI0['csn'], SPI0['ce'], SPI_SPEED)
+#rx_radio = RF24(SPI1['SPI'],SPI1['csn'], SPI1['ce'], SPI_SPEED)
+#tx_radio = RF24(SPI0['ce'], SPI0['SPI'], SPI_SPEED)
+#rx_radio = RF24(SPI1['ce'], SPI1['SPI'], SPI_SPEED)
+# tx_radio = RF24(17, 0)
+# rx_radio = RF24(27, 10)
+tx_radio = RF24(11, 0)
+rx_radio = RF24(13, 10)
+
 
 def setup():
     # Initialize radio, if error: return runtime error
@@ -123,7 +134,16 @@ def receive(rx_radio, timeout):
     #index: bytes
     #address: bytes
     #for index, address in enumerate(IP_TABLE):
-    rx_radio.openReadingPipe(0, b"\x78" * 5)
+    #address: Bytes = [
+    #    0xCC,
+    #    0xCE,
+    #    0xCC,
+    #    0xCE,
+    #    0xCC
+    #]
+    address: bytes = b"\xF1\xB6\xB5\xB4\xB3"
+
+    rx_radio.openReadingPipe(1, address)
     # Start listening'
     rx_radio.startListening()
     start = time.time()
