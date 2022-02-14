@@ -58,7 +58,7 @@ else
     # Install .deb
     packagename=$(ls $HOME/git/$repofolder/*armhf.deb)
     sudo dpkg -i $packagename
-    rm $HOME/git/$repofolder/librf24-RPi*armhf.deb
+    rm $HOME/git/$repofolder/librf24-SPIDEV*armhf.deb
     echo "LibRF24 installed."
 fi
 
