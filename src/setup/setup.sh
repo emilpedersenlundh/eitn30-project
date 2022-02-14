@@ -52,13 +52,13 @@ else
     curl -s https://api.github.com/repos/nRF24/RF24/releases/latest \
     | grep "browser_download_url.*deb" \
     | grep armhf \
-    | grep RPi \
+    | grep SPIDEV \
     | cut -d '"' -f 4 \
     | wget -qi -
     # Install .deb
     packagename=$(ls $HOME/git/$repofolder/*armhf.deb)
     sudo dpkg -i $packagename
-    rm $HOME/git/$repofolder/librf24-SPIDEV*armhf.deb
+    rm $HOME/git/$repofolder/$packagename
     echo "LibRF24 installed."
 fi
 
