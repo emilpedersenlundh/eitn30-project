@@ -12,18 +12,20 @@ from random import randint
 import numpy as np
 
 SPI0 = {
+    'spi':0,
     'MOSI':10,#dio.DigitalInOut(board.D10),
     'MISO':9,#dio.DigitalInOut(board.D9),
     'clock':11,#dio.DigitalInOut(board.D11),
-    'ce':dio.DigitalInOut(board.D17),
-    'csn':dio.DigitalInOut(board.D8),
+    'ce':17,#dio.DigitalInOut(board.D17),
+    'csn':8,#dio.DigitalInOut(board.D8),
     }
 SPI1 = {
+    'spi':10,
     'MOSI':20,#dio.DigitalInOut(board.D10),
     'MISO':19,#dio.DigitalInOut(board.D9),
     'clock':21,#dio.DigitalInOut(board.D11),
-    'ce':dio.DigitalInOut(board.D27),
-    'csn':dio.DigitalInOut(board.D18),
+    'ce':27,#dio.DigitalInOut(board.D27),
+    'csn':18#dio.DigitalInOut(board.D18),
     }
 
 def tx(nrf, channel, address, count, size):
@@ -100,12 +102,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    SPI0['spi'] = busio.SPI(**{x: SPI0[x] for x in ['clock', 'MOSI', 'MISO']})
-    SPI1['spi'] = busio.SPI(**{x: SPI1[x] for x in ['clock', 'MOSI', 'MISO']})
+    #SPI0['spi'] = busio.SPI(**{x: SPI0[x] for x in ['clock', 'MOSI', 'MISO']})
+    #SPI1['spi'] = busio.SPI(**{x: SPI1[x] for x in ['clock', 'MOSI', 'MISO']})
 
     # initialize the nRF24L01 on the spi bus object
-    rx_nrf = RF24(**{x: SPI0[x] for x in ['spi', 'csn', 'ce']})
-    tx_nrf = RF24(**{x: SPI1[x] for x in ['spi', 'csn', 'ce']})
+    #rx_nrf = RF24(**{x: SPI0[x] for x in ['spi', 'csn', 'ce']})
+    #tx_nrf = RF24(**{x: SPI1[x] for x in ['spi', 'csn', 'ce']})
+    rx_nrf = RF24(SPI0['spi'], SPI0['csn'], SPI0['ce'])
+    tx_nrf = RF24(SPI1['spi'], SPI1['csn'], SPI1['ce'])
 
     for nrf in [rx_nrf, tx_nrf]:
         nrf.data_rate = 1
@@ -114,7 +118,7 @@ if __name__ == "__main__":
         nrf.payload_length = 32
         nrf.crc = True
         nrf.ack = 1
-        nrf.spi_frequency = 20000000
+        nrf.spi_frequency = 10000000
 
     rx_process = Process(target=rx, kwargs={'nrf':rx_nrf, 'address':bytes(args.src, 'utf-8'), 'count': args.cnt, 'channel': args.rxchannel})
     tx_process = Process(target=tx, kwargs={'nrf':tx_nrf, 'address':bytes(args.dst, 'utf-8'), 'count': args.cnt, 'channel': args.txchannel, 'size':args.size})
