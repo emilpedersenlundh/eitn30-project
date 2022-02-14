@@ -14,7 +14,7 @@ git config --global user.email "notan@email.com"
 #Git repository installation
 if [[ -d "$HOME/git/" ]]
 then
-    if [[ -f "$HOME/git/$repofolder/" ]]
+    if [[ -d "$HOME/git/$repofolder/" ]]
     then
         echo "Git repository exists, updating."
         cd $HOME/git/$repofolder/
