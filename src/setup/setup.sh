@@ -123,6 +123,3 @@ echo "Installation complete."
 
 ##Setup virtual interface
 #sudo modprobe tun
-
-#Configure SPI devices
-#TODO: Implement configuration of /boot/config.txt to start SPI devices correctly
