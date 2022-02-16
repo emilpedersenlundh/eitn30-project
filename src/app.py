@@ -14,7 +14,7 @@ import RPi.GPIO as GPIO
 
 from RF24 import RF24, RF24_PA_LOW
 
-SPI_SPEED = 10000000 #Hz
+SPI_SPEED: c_uint32 = 10000000 #Hz
 LOCAL_ADDRESS = [] #Lägga in lokal ip
 
 LOCAL_PACKET = {
@@ -70,9 +70,8 @@ GPIO.setup(SPI1['clock'], GPIO.OUT)
 # tx_radio = RF24(17, 0)
 # rx_radio = RF24(27, 10)
 
-tx_radio = RF24(17, 0)
-rx_radio = RF24(27, 10)
-
+tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
+rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
 
 def setup():
     # Initialize radio, if error: return runtime error
@@ -86,7 +85,8 @@ def setup():
     # Set data rate
     # Set payload size (dynamic/static)
 
-    #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI0['csn'] , SPI0['ce'] , SPI_SPEED))
+    #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI1['csn'] , SPI1['ce'] , SPI_SPEED))
+    #rx_radio.begin(SPI1['ce'], SPI1['ce'], SPI1['csn'])
     rx_radio.begin()
 
 ## Control plane
@@ -102,8 +102,7 @@ def authenticate():
 
 def associate():
     # Add node to address array with lease timestamp
-    # If TDMA: Add to schedule, sync clocks
-    # Else apply random access scheme
+    # Set staggered retransmit delay if enabled
     print("Associate")
 
 def disassociate():
@@ -158,7 +157,6 @@ def receive(rx_radio, timeout):
     pipe = 0
     address = b"\xF1\xB6\xB5\xB4\xB3"
     width: c_uint8 = 5
-    print(address)
     rx_radio.setAddressWidth(width)
     rx_radio.openReadingPipe(1, address)
     # Start listening'
