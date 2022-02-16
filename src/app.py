@@ -1,7 +1,7 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
 from ast import Bytes
-from ctypes import c_byte, c_uint16, c_uint32
+from ctypes import c_byte, c_uint, c_uint16, c_uint32, c_uint8
 import sys
 import argparse
 import time
@@ -48,6 +48,19 @@ SPI1: c_uint16 = {
     'csn':18#digitalio.DigitalInOut(board.D18),
     }
 
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(SPI0['csn'], GPIO.OUT)
+GPIO.setup(SPI0['ce'], GPIO.OUT)
+GPIO.setup(SPI0['MOSI'], GPIO.OUT)
+GPIO.setup(SPI0['MISO'], GPIO.IN)
+GPIO.setup(SPI1['csn'], GPIO.OUT)
+GPIO.setup(SPI1['ce'], GPIO.OUT)
+GPIO.setup(SPI1['MOSI'], GPIO.OUT)
+GPIO.setup(SPI1['MISO'], GPIO.IN)
+GPIO.setup(SPI1['clock'], GPIO.OUT)
+
+
+
 ### Implement separate socket server which listens to the virtual interface and relays packets (also implements sending packets, i.e. the reverse)
 
 #tx_radio = RF24(SPI0['SPI'],SPI0['csn'], SPI0['ce'], SPI_SPEED)
@@ -56,8 +69,9 @@ SPI1: c_uint16 = {
 #rx_radio = RF24(SPI1['ce'], SPI1['SPI'], SPI_SPEED)
 # tx_radio = RF24(17, 0)
 # rx_radio = RF24(27, 10)
-tx_radio = RF24(11, 0)
-rx_radio = RF24(13, 10)
+
+tx_radio = RF24(17, 0)
+rx_radio = RF24(27, 10)
 
 
 def setup():
@@ -73,7 +87,7 @@ def setup():
     # Set payload size (dynamic/static)
 
     #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI0['csn'] , SPI0['ce'] , SPI_SPEED))
-    tx_radio.begin()
+    rx_radio.begin()
 
 ## Control plane
 def discover():
@@ -141,8 +155,11 @@ def receive(rx_radio, timeout):
     #    0xCE,
     #    0xCC
     #]
-    address: bytes = b"\xF1\xB6\xB5\xB4\xB3"
-
+    pipe = 0
+    address = b"\xF1\xB6\xB5\xB4\xB3"
+    width: c_uint8 = 5
+    print(address)
+    rx_radio.setAddressWidth(width)
     rx_radio.openReadingPipe(1, address)
     # Start listening'
     rx_radio.startListening()
@@ -233,16 +250,16 @@ if __name__ == "__main__":
 
     setup()
     dest_addr = 1
-    runtime = 5000
+    duration = 5000
     role = mode(sys.argv[0])
     count = 3
 
     while count:
         if(role == "BASE"):
             start = time.time()
-            while(time.time() - start < runtime):
+            while(time.time() - start < duration):
                 transmit(tx_radio, dest_addr)
         else:
             start = time.time()
-            receive(rx_radio, runtime)
+            receive(rx_radio, duration)
         count -= 1
