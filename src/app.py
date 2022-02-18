@@ -48,6 +48,15 @@ SPI1: c_uint16 = {
     'csn':18#digitalio.DigitalInOut(board.D18),
     }
 
+PIPE_ADDRESSES = [
+    b"\x78" * 5,
+    b"\xF1\xB6\xB5\xB4\xB3",
+    b"\xCD\xB6\xB5\xB4\xB3",
+    b"\xA3\xB6\xB5\xB4\xB3",
+    b"\x0F\xB6\xB5\xB4\xB3",
+    b"\x05\xB6\xB5\xB4\xB3"
+]
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(SPI0['csn'], GPIO.OUT)
 GPIO.setup(SPI0['ce'], GPIO.OUT)
@@ -65,29 +74,35 @@ GPIO.setup(SPI1['clock'], GPIO.OUT)
 
 #tx_radio = RF24(SPI0['SPI'],SPI0['csn'], SPI0['ce'], SPI_SPEED)
 #rx_radio = RF24(SPI1['SPI'],SPI1['csn'], SPI1['ce'], SPI_SPEED)
-#tx_radio = RF24(SPI0['ce'], SPI0['SPI'], SPI_SPEED)
-#rx_radio = RF24(SPI1['ce'], SPI1['SPI'], SPI_SPEED)
+tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
+rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
 # tx_radio = RF24(17, 0)
 # rx_radio = RF24(27, 10)
 
-tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
-rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
+#tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
+#rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
 
 def setup():
     # Initialize radio, if error: return runtime error
+    rx_radio.begin(SPI1['SPI'])
     # Set power amplifier level
+    rx_radio.setPALevel(RF24_PA_LOW)
+    # Set payload size (dynamic/static)
+    rx_radio.enableDynamicPayloads
     # Set CRC encoding
     # Set CRC enable/disable
     # Set address width
     # Set auto-retransmit delay
     # Set auto-retransmit limit
     # Set channel
+    rx_radio.channel = 108
     # Set data rate
-    # Set payload size (dynamic/static)
+    # Open pipes
+    for pipe, address in enumerate(PIPE_ADDRESSES):
+        rx_radio.openReadingPipe(pipe, address)
 
     #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI1['csn'] , SPI1['ce'] , SPI_SPEED))
     #rx_radio.begin(SPI1['ce'], SPI1['ce'], SPI1['csn'])
-    rx_radio.begin()
 
 ## Control plane
 def discover():
@@ -153,17 +168,11 @@ def receive(rx_radio, timeout):
     #    0xCC,
     #    0xCE,
     #    0xCC
-    #]
-    rx_radio.open_rx_pipe(0, address)
-    rx_radio.listen = True  # put radio into RX mode and power up
-    rx_radio.channel = 108
+    #
 
     print('Rx NRF24L01+ started w/ power {}, SPI freq: {} hz'.format(rx_radio.pa_level, rx_radio.spi_frequency))
-    pipe = 0
-    address = b"\xF1\xB6\xB5\xB4\xB3"
     width: c_uint8 = 5
     rx_radio.setAddressWidth(width)
-    rx_radio.openReadingPipe(1, address)
     # Start listening'
     rx_radio.startListening()
     start = time.time()
@@ -179,7 +188,9 @@ def receive(rx_radio, timeout):
             print("Payload size = {} \nPayload = {}".format(payload_size, datatest))
             DATA_BUFFER[pipe_nbr] = datatest
             print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, datatest))
-    print("Receiver")
+            start = time.time()
+    print("Timeout")
+    rx_radio.stopListening()
 
 def construct_packet(dest, data):
     header = {
