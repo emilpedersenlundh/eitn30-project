@@ -154,6 +154,11 @@ def receive(rx_radio, timeout):
     #    0xCE,
     #    0xCC
     #]
+    rx_radio.open_rx_pipe(0, address)
+    rx_radio.listen = True  # put radio into RX mode and power up
+    rx_radio.channel = 108
+
+    print('Rx NRF24L01+ started w/ power {}, SPI freq: {} hz'.format(rx_radio.pa_level, rx_radio.spi_frequency))
     pipe = 0
     address = b"\xF1\xB6\xB5\xB4\xB3"
     width: c_uint8 = 5
@@ -166,11 +171,13 @@ def receive(rx_radio, timeout):
     while(time.time() - start < timeout):
         #Checks if there are bytes available for read
         payload_available, pipe_nbr = rx_radio.available_pipe()
+        print("Radio available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
         if(payload_available):
             # If has payload, read radio packet size
             payload_size = rx_radio.getDynamicPayloadSize()
             datatest = rx_radio.read(payload_size)
-            DATA_BUFFER[pipe_nbr] = rx_radio.read(payload_size)
+            print("Payload size = {} \nPayload = {}".format(payload_size, datatest))
+            DATA_BUFFER[pipe_nbr] = datatest
             print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, datatest))
     print("Receiver")
 
