@@ -27,9 +27,9 @@ LOCAL_PACKET = {
 IP_TABLE = np.array([1 for _ in range(6)])
 
 #Data buffer for all pipes in rx (128 bytes)
-DATA_BUFFER = np.array([[np.int8 for _ in range(128)] for _ in range(len(IP_TABLE))])
+DATA_BUFFER = np.array([[] for _ in range(len(IP_TABLE))])
 
-SPI0: c_uint16 = {
+SPI0 = {
     'SPI':0,
     'MOSI':10,#dio.DigitalInOut(board.D10),
     'MISO':9,#dio.DigitalInOut(board.D9),
@@ -37,7 +37,7 @@ SPI0: c_uint16 = {
     'ce':17,#digitalio.DigitalInOut(board.D17),
     'csn':8#digitalio.DigitalInOut(board.D8),
     }
-SPI1: c_uint16 = {
+SPI1 = {
     'SPI':10,
     'MOSI':20,#dio.DigitalInOut(board.D10),
     'MISO':19,#dio.DigitalInOut(board.D9),
@@ -56,6 +56,7 @@ PIPE_ADDRESSES = [
 ]
 
 GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 GPIO.setup(SPI0['csn'], GPIO.OUT)
 GPIO.setup(SPI0['ce'], GPIO.OUT)
 GPIO.setup(SPI0['MOSI'], GPIO.OUT)
@@ -72,17 +73,17 @@ GPIO.setup(SPI1['clock'], GPIO.OUT)
 
 #tx_radio = RF24(SPI0['SPI'],SPI0['csn'], SPI0['ce'], SPI_SPEED)
 #rx_radio = RF24(SPI1['SPI'],SPI1['csn'], SPI1['ce'], SPI_SPEED)
-tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
-rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
+#tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
+#rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
 # tx_radio = RF24(17, 0)
 # rx_radio = RF24(27, 10)
 
-#tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
-#rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
+tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
+rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
 
 def setup():
     # Initialize radio, if error: return runtime error
-    rx_radio.begin(SPI1['SPI'])
+    rx_radio.begin()
     # Set power amplifier level
     rx_radio.setPALevel(RF24_PA_LOW)
     # Set payload size (dynamic/static)
@@ -93,12 +94,14 @@ def setup():
     # Set auto-retransmit delay
     # Set auto-retransmit limit
     # Set channel
-    rx_radio.channel = 108
+    rx_radio.setChannel(108)
     # Set data rate
     # Open pipes
     for pipe, address in enumerate(PIPE_ADDRESSES):
         rx_radio.openReadingPipe(pipe, address)
 
+    rx_radio.flush_rx()
+    rx_radio.flush_tx()
     #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI1['csn'] , SPI1['ce'] , SPI_SPEED))
     #rx_radio.begin(SPI1['ce'], SPI1['ce'], SPI1['csn'])
 
@@ -168,7 +171,7 @@ def receive(rx_radio, timeout):
     #    0xCC
     #
 
-    print('Rx NRF24L01+ started w/ power {}, SPI freq: {} hz'.format(rx_radio.pa_level, rx_radio.spi_frequency))
+    print('Rx NRF24L01+ started w/ power {}, SPI freq: {} hz'.format(rx_radio.getPALevel(), SPI_SPEED))
     width: c_uint8 = 5
     rx_radio.setAddressWidth(width)
     # Start listening'
@@ -182,10 +185,10 @@ def receive(rx_radio, timeout):
         if(payload_available):
             # If has payload, read radio packet size
             payload_size = rx_radio.getDynamicPayloadSize()
-            datatest = rx_radio.read(payload_size)
-            print("Payload size = {} \nPayload = {}".format(payload_size, datatest))
-            DATA_BUFFER[pipe_nbr] = datatest
-            print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, datatest))
+            payload = rx_radio.read(payload_size)
+            print("Payload size = {} \nPayload = {}".format(payload_size, np.ravel(np.array(payload))))
+            DATA_BUFFER[pipe_nbr] = np.array([payload])
+            print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, np.ravel(DATA_BUFFER[pipe_nbr])))
             start = time.time()
     print("Timeout")
     rx_radio.stopListening()
