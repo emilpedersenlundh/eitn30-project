@@ -7,8 +7,6 @@ import argparse
 import time
 import struct
 import typing
-import board
-import digitalio
 import numpy as np
 import RPi.GPIO as GPIO
 
