@@ -39,9 +39,11 @@ SPI1 = {
     'MOSI':20,#dio.DigitalInOut(board.D10),
     'MISO':19,#dio.DigitalInOut(board.D9),
     'clock':21,#dio.DigitalInOut(board.D11),
-    'ce':dio.DigitalInOut(board.D27),
+    'ce':d.DigitalInOut(board.D27),
     'csn':dio.DigitalInOut(board.D18),
     }
+
+print()
 
 
 ### Implement separate socket server which listens to the virtual interface and relays packets (also implements sending packets, i.e. the reverse)
@@ -120,8 +122,10 @@ def transmit(tx_radio, address):
 def receive(rx_radio, timeout):
     # Make sure all 6 pipes are open
     for index, address in enumerate(IP_TABLE):
-        rx_radio.openReadingPipe(index, address)
+        if(address != -1):
+            rx_radio.openReadingPipe(index, address)
     # Start listening
+    bytes(2).decode
     rx_radio.startListening()
     start = time.time()
     # Timeout condition
