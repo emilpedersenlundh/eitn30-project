@@ -1,12 +1,15 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
+import array
 from ast import Bytes
 from ctypes import c_byte, c_uint, c_uint16, c_uint32, c_uint8
+import string
 import sys
 import argparse
 import time
 import struct
 import typing
+from xmlrpc.client import boolean
 import numpy as np
 import RPi.GPIO as GPIO
 
@@ -75,8 +78,8 @@ GPIO.setup(SPI1['clock'], GPIO.OUT)
 #rx_radio = RF24(SPI1['SPI'],SPI1['csn'], SPI1['ce'], SPI_SPEED)
 #tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
 #rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
-# tx_radio = RF24(17, 0)
-# rx_radio = RF24(27, 10)
+#tx_radio = RF24(17, 0)
+#rx_radio = RF24(27, 10)
 
 tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
 rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
@@ -107,6 +110,9 @@ def setup():
     # Set auto-retransmit delay
 
     # Set auto-retransmit limit
+
+    # Set auto-ACK (This might fix available pipe always returning true, could also be broken module)
+    rx_radio.setAutoAck(False)
 
     # Set channel
     rx_radio.setChannel(108)
@@ -152,19 +158,19 @@ def disassociate():
 def transmit(tx_radio, address):
 
     count = 10
-
+    size = 32
     status = []
-    buffer = np.random.bytes(32)
+    buffer = np.random.bytes(size)
 
     start = time.monotonic()
     while count:
         # use struct.pack to packetize your data
         # into a usable payload
 
-        #buffer = struct.pack("<i", count)
+        buffer = struct.pack("<", count)
         # 'i' means a single 4 byte int value.
         # '<' means little endian byte order. this may be optional
-        #print("Sending: {} as struct: {}".format(count, buffer))
+        print("Sending: {} as struct: {}".format(count, buffer))
         result = tx_radio.send(buffer)
         if not result:
             #print("send() failed or timed out")
@@ -177,8 +183,7 @@ def transmit(tx_radio, address):
         count -= 1
     total_time = time.monotonic() - start
 
-    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), 32*8*len(status)/total_time))
-    #TODO: Replace ^ 32 with size
+    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
 
 def receive(rx_radio, timeout):
 
@@ -202,12 +207,15 @@ def receive(rx_radio, timeout):
 
             # If has payload, read radio packet size
             payload_size = rx_radio.getDynamicPayloadSize()
-            payload = rx_radio.read(payload_size)
+            payload = struct.unpack(rx_radio.read("<", payload_size))
             print("Payload size = {} \nPayload = {}".format(payload_size, np.ravel(np.array(payload))))
 
             # Insert payload into data buffer
             DATA_BUFFER[pipe_nbr] = np.array([payload])
             print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, np.ravel(DATA_BUFFER[pipe_nbr])))
+
+            # Flush rx buffer
+            #rx_radio.flush_rx()
 
             # Reset the timeout timer
             start = time.time()
@@ -216,7 +224,11 @@ def receive(rx_radio, timeout):
     print("Timeout")
     rx_radio.stopListening()
 
-def construct_packet(dest, data):
+def construct_packet(dest_address: string, data: List, broadcast: boolean = False):
+
+    # Invalid addresses (unless broadcast is set)
+    if(not broadcast):
+        not_allowed = ("0.0.0.0.0", "255.255.255.255")
 
     header = {
         'version':0b0100, #4bits
@@ -243,8 +255,15 @@ def construct_packet(dest, data):
         'Dest':0x0, #4bytes
     }
 
-    header['Source'] = LOCAL_ADDRESS
-    header['Dest'] = dest
+    # Assuming the usage of 111.111.111.111 string format
+    if(LOCAL_ADDRESS in not_allowed):
+        print("Bad source address, \"{}\"".format(LOCAL_ADDRESS))
+    elif(dest_address in not_allowed):
+        print("Bad destination address, \"{}\"".format(dest_address))
+
+    # Convert IP addresses to bytearrays
+    header['Source'] = bytes(map(int, LOCAL_ADDRESS.split(".")))
+    header['Dest'] = bytes(map(int, dest_address.split(".")))
 
     header_bytes = [
         ( ( (header['version'] << 4) + header['IHL']) << 8 ) + ( (header['DSCP'] << 2) + header['ECN'] ),
@@ -256,21 +275,32 @@ def construct_packet(dest, data):
         header['Source'] & 0xFFFF,
         header['Dest']
     ]
+
+    """ # Debug
     #Verify header
     print([hex(x) for x in header_bytes])
+    """
 
+    # Checksum = index of checksum in header_bytes (should not be included in calculation)
     checksum = 5
     for i, value in enumerate(header_bytes):
         if(i != checksum):
+
+            """ # Debug
             print("Iteration: {} and length {}".format(i, len(bin(header_bytes[checksum]))))
             before = header_bytes[checksum]
+            """
+
             header_bytes[checksum] = header_bytes[checksum] + value
+
+            """ # Debug
             print('''\
                 {:016b}
               + {:016b}
                 ------------------
                 {:016b}\n'''.format(before, value, header_bytes[checksum]))
             print("In hex: 0x{:04x} + 0x{:04x} = 0x{:04x}\n".format(before, value, header_bytes[checksum]))
+            """
 
             # Carry bit
             if(len(bin(header_bytes[checksum])) > 17):
@@ -280,12 +310,11 @@ def construct_packet(dest, data):
                 else:
                     header_bytes[checksum] = header_bytes[checksum] & 0xFFFF
 
-    source_ip = LOCAL_ADDRESS
-    dest_ip = dest
-    data = data
+    payload = data
 
+    packet = header_bytes.append(bytes(payload))
 
-
+    return packet
 
 def mode(userinput: str=""):
     mode = ""
