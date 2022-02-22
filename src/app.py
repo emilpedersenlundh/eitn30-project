@@ -189,9 +189,6 @@ def receive(rx_radio, timeout):
 
     print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(rx_radio.getPALevel(), SPI_SPEED))
 
-    width: c_uint8 = 5
-    rx_radio.setAddressWidth(width)
-
     # Start listening
     rx_radio.startListening()
     start = time.time()
