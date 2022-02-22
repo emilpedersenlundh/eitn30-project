@@ -56,7 +56,7 @@ PIPE_ADDRESSES = [
     b"\x05\xB6\xB5\xB4\xB3"
 ]
 
-GPIO.setmode(GPIO.BCM)
+""" GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 GPIO.setup(SPI0['csn'], GPIO.OUT)
 GPIO.setup(SPI0['ce'], GPIO.OUT)
@@ -66,7 +66,7 @@ GPIO.setup(SPI1['csn'], GPIO.OUT)
 GPIO.setup(SPI1['ce'], GPIO.OUT)
 GPIO.setup(SPI1['MOSI'], GPIO.OUT)
 GPIO.setup(SPI1['MISO'], GPIO.IN)
-GPIO.setup(SPI1['clock'], GPIO.OUT)
+GPIO.setup(SPI1['clock'], GPIO.OUT) """
 
 
 
