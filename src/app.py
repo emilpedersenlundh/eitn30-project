@@ -1,7 +1,6 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
 import array
-from ast import Bytes
 from ctypes import c_byte, c_uint, c_uint16, c_uint32, c_uint8
 import string
 import sys
@@ -9,7 +8,6 @@ import argparse
 import time
 import struct
 import typing
-from xmlrpc.client import boolean
 import numpy as np
 import RPi.GPIO as GPIO
 
@@ -221,7 +219,7 @@ def receive(rx_radio, timeout):
     print("Timeout")
     rx_radio.stopListening()
 
-def construct_packet(dest_address: string, data: List, broadcast: boolean = False):
+def construct_packet(dest_address: string, data: list, broadcast: bool = False):
 
     # Invalid addresses (unless broadcast is set)
     if(not broadcast):
