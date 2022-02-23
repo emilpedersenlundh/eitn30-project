@@ -50,6 +50,16 @@ SPI1 = {
     }
 
 PIPE_ADDRESSES = [
+    b"\xE7\xD3\xF0\x35\x77",
+    b"\xC2\xC2\xC2\xC2\xC2",
+    b"\xC2\xC2\xC2\xC2\xC3",
+    b"\xC2\xC2\xC2\xC2\xC4",
+    b"\xC2\xC2\xC2\xC2\xC5",
+    b"\xC2\xC2\xC2\xC2\xC6"
+]
+
+"""
+PIPE_ADDRESSES = [
     b"\x78" * 5,
     b"\xF1\xB6\xB5\xB4\xB3",
     b"\xCD\xB6\xB5\xB4\xB3",
@@ -57,6 +67,8 @@ PIPE_ADDRESSES = [
     b"\x0F\xB6\xB5\xB4\xB3",
     b"\x05\xB6\xB5\xB4\xB3"
 ]
+"""
+
 
 """ GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
@@ -99,8 +111,8 @@ def setup(mode_select: str="NODE"):
     tx_radio.setPALevel(RF24_PA_LOW)
 
     # Set payload size (dynamic/static)
-    rx_radio.enableDynamicPayloads
-    tx_radio.enableDynamicPayloads
+    rx_radio.enableDynamicPayloads()
+    tx_radio.enableDynamicPayloads()
 
     # Set CRC encoding
 
@@ -119,8 +131,8 @@ def setup(mode_select: str="NODE"):
 
     # Set channel
     # Testa kanal 76
-    rx_radio.setChannel(108)
-    tx_radio.setChannel(108)
+    rx_radio.setChannel(76)
+    tx_radio.setChannel(76)
 
     # Set data rate
     #rx_radio.setDataRate(DATA_RATE)
@@ -130,8 +142,11 @@ def setup(mode_select: str="NODE"):
     for pipe, address in enumerate(PIPE_ADDRESSES):
         if(mode_select == "NODE"):
             rx_radio.openReadingPipe(pipe, address)
+            print("Opened reading pipe: {} with address: {}".format(pipe, address))
         else:
-            tx_radio.openWritingPipe(pipe, address)
+            #tx_radio.openWritingPipe(address)
+            print("Opened writing pipe with address: {}".format(address))
+    tx_radio.openWritingPipe(PIPE_ADDRESSES[1])
 
     # Flush buffers
     rx_radio.flush_rx()
@@ -180,7 +195,6 @@ def transmit(tx_radio, address):
         # '<' means little endian byte order. this may be optional
         print("Sending: {} as struct: {}".format(count, buffer))
         result = tx_radio.write(buffer, False)
-        print("lol")
         if not result:
             print("send() failed or timed out")
             #print(tx_radio.what_happened())
@@ -201,19 +215,18 @@ def receive(rx_radio, timeout):
     # Start listening
     rx_radio.startListening()
     start = time.time()
-
     # Timeout condition
     while(time.time() - start < timeout):
 
         #Checks if there are bytes available for read
         payload_available, pipe_nbr = rx_radio.available_pipe()
-        #print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
-
+        
         if(payload_available):
 
+            print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
             # If has payload, read radio packet size
             payload_size = rx_radio.getDynamicPayloadSize()
-            payload = struct.unpack(rx_radio.read("<", payload_size))
+            payload = struct.unpack("<i", rx_radio.read(payload_size))
             print("Payload size = {} \nPayload = {}".format(payload_size, np.ravel(np.array(payload))))
 
             # Insert payload into data buffer
@@ -325,8 +338,8 @@ def construct_packet(dest_address: string, data: list, broadcast: bool = False):
 def mode(userinput: str=""):
     mode = ""
     print(userinput)
-    if userinput.upper() == "BASE" or userinput.upper() == "NODE":
-        mode = userinput.upper()
+    if userinput == "BASE" or userinput == "NODE":
+        mode = userinput
     else:
         print("No mode specified, defaulting to NODE..")
         mode = "NODE"
@@ -335,7 +348,7 @@ def mode(userinput: str=""):
 
 if __name__ == "__main__":
 
-    mode_select = input("Select mode (BASE or NODE)")
+    mode_select = input("Select mode (BASE or NODE)").upper()
 
     setup(mode_select)
     dest_addr = 1
