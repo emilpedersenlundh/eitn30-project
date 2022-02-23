@@ -14,6 +14,8 @@ import RPi.GPIO as GPIO
 from RF24 import RF24, RF24_PA_LOW
 
 SPI_SPEED: c_uint32 = 10000000 #Hz
+DATA_RATE: int = 1 #2 MBPS
+A_WIDTH: c_uint8 = 5
 LOCAL_ADDRESS = [] #Lägga in lokal ip
 
 LOCAL_PACKET = {
@@ -85,8 +87,12 @@ rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
 def setup():
 
     # Initialize radio, if error: return runtime error
-    rx_radio.begin()
-    tx_radio.begin()
+
+    if not rx_radio.begin():
+        raise RuntimeError("RX Radio is inactive.")
+
+    if not tx_radio.begin():
+        raise RuntimeError("TX Radio is inactive.")
 
     # Set power amplifier level
     rx_radio.setPALevel(RF24_PA_LOW)
@@ -100,10 +106,9 @@ def setup():
 
     # Set CRC enable/disable
 
-    # Set address width
-    width: c_uint8 = 5
-    rx_radio.setAddressWidth(width)
-    tx_radio.setAddressWidth(width)
+    # Set address A_WIDTH
+    rx_radio.setAddressWidth(A_WIDTH)
+    tx_radio.setAddressWidth(A_WIDTH)
 
     # Set auto-retransmit delay
 
@@ -113,10 +118,13 @@ def setup():
     #rx_radio.setAutoAck(False)
 
     # Set channel
+    # Testa kanal 76
     rx_radio.setChannel(108)
     tx_radio.setChannel(108)
 
     # Set data rate
+    #rx_radio.setDataRate(DATA_RATE)
+    #tx_radio.setDataDate(DATA_RATE)
 
     # Open pipes
     for pipe, address in enumerate(PIPE_ADDRESSES):
