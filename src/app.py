@@ -196,7 +196,7 @@ def receive(rx_radio, timeout):
 
         #Checks if there are bytes available for read
         payload_available, pipe_nbr = rx_radio.available_pipe()
-        print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
+        #print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
 
         if(payload_available):
 
@@ -313,7 +313,8 @@ def construct_packet(dest_address: string, data: list, broadcast: bool = False):
 
 def mode(userinput: str=""):
     mode = ""
-    if userinput == "BASE" or userinput == "NODE":
+    print(userinput)
+    if userinput.upper() == "BASE" or userinput.upper() == "NODE":
         mode = userinput
     else:
         print("No mode specified, defaulting to NODE..")
@@ -326,7 +327,7 @@ if __name__ == "__main__":
     setup()
     dest_addr = 1
     duration = 5000
-    role = mode(sys.argv[0])
+    role = mode(input("Select mode (BASE or NODE)"))
     count = 3
 
     while count:
