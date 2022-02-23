@@ -8,6 +8,10 @@ repofolder=$( basename "$repository" .git)
 pinbr="$(echo $HOSTNAME | tail -c 2)"
 ROOT_PATH="$HOME/git/$repofolder"
 
+# Binary, library and header paths
+LIB_PATH="/usr/local/lib"
+HEADER_PATH="/usr/local/include/RF24"
+
 #Configure git
 git config --global user.name "InternetInutiPi$pinbr"
 git config --global user.email "notan@email.com"
@@ -42,44 +46,39 @@ sudo usermod -a -G spi inutiuser
 
 ##Install radio dependencies
 #C++ Library
-#if [[ -d "/usr/include/RF24/" ]]
-#then
-    #TODO: Remove old installation
-    #echo "LibRF24 exists on system. Skipping installation."
-#else
-    ## Install latest .deb release
-    # cd $HOME/git/$repofolder/src/
-    # echo "Installing LibRF24."
-    # curl -s https://api.github.com/repos/nRF24/RF24/releases/latest \
-    # | grep "browser_download_url.*deb" \
-    # | grep armhf \
-    # | grep SPIDEV \
-    # | cut -d '"' -f 4 \
-    # | wget -qi -
-    # # Install .deb
-    # packagename=$(ls $HOME/git/$repofolder/*armhf.deb)
-    # sudo dpkg -i $packagename
-    # rm $packagename
-    # echo "LibRF24 installed."
 
-    ## Install via script.
-    echo ""
-    echo "Installing LibRF24."
-    echo ""
+echo "TEST: Right before old installation removal.";sleep 0.3
+#TODO: Remove old installation
+if [[ -f "/usr/local/lib/librf24*" ]]
+then
+    echo "Old libraries found. Removing.";sleep 0.3
+    sudo rm -r /usr/local/lib/librf24*
+fi
+if [[ -d "/usr/local/include/RF24/" ]]
+then
+    echo "Old headers found. Removing.";sleep 0.3
+    sudo rm -r /usr/local/include/RF24*
+fi
+
+echo ""
+echo "Installing LibRF24."
+echo ""
+if [[ -d "$ROOT_PATH/RF24/" ]]
+then
+    cd $ROOT_PATH/RF24
+    git pull
+else
     git clone https://github.com/tmrh20/RF24.git ${ROOT_PATH}/RF24
-    echo ""
+fi
 
-    cd ${ROOT_PATH}/RF24
-    $(./configure --driver=SPIDEV)
-    cd ../..
-    make -C ${ROOT_PATH}/RF24
-    sudo make install -C ${ROOT_PATH}/RF24
-
-    echo ""
-    echo "*** LibRF24 installed. ***"
-    echo ""
-#fi
-
+cd ${ROOT_PATH}/RF24
+$(./configure --driver=SPIDEV)
+cd ../..
+make -C ${ROOT_PATH}/RF24
+sudo make install -C ${ROOT_PATH}/RF24
+echo ""
+echo "*** LibRF24 installed. ***"
+echo ""
 sudo apt-get install -y python3-dev libboost-python-dev python3-pip python3-rpi.gpio build-essential libatlas-base-dev
 sudo ln -s $(ls /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3*.so | tail -1) /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3.so
 
