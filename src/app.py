@@ -165,17 +165,18 @@ def transmit(tx_radio, address):
         # use struct.pack to packetize your data
         # into a usable payload
 
-        buffer = struct.pack("<", count)
+        buffer = struct.pack("<i", count)
         # 'i' means a single 4 byte int value.
         # '<' means little endian byte order. this may be optional
         print("Sending: {} as struct: {}".format(count, buffer))
-        result = tx_radio.send(buffer)
+        result = tx_radio.write(buffer)
+        print("lol")
         if not result:
-            #print("send() failed or timed out")
-            #print(tx_radio.what_happened())
+            print("send() failed or timed out")
+            print(tx_radio.what_happened())
             status.append(False)
         else:
-            #print("send() successful")
+            print("send() successful")
             status.append(True)
         # print timer results despite transmission success
         count -= 1
@@ -315,7 +316,7 @@ def mode(userinput: str=""):
     mode = ""
     print(userinput)
     if userinput.upper() == "BASE" or userinput.upper() == "NODE":
-        mode = userinput
+        mode = userinput.upper()
     else:
         print("No mode specified, defaulting to NODE..")
         mode = "NODE"
