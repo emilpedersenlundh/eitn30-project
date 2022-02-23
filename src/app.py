@@ -177,11 +177,11 @@ def transmit(tx_radio, address):
         # 'i' means a single 4 byte int value.
         # '<' means little endian byte order. this may be optional
         print("Sending: {} as struct: {}".format(count, buffer))
-        result = tx_radio.write(buffer)
+        result = tx_radio.write(buffer, False)
         print("lol")
         if not result:
             print("send() failed or timed out")
-            print(tx_radio.what_happened())
+            #print(tx_radio.what_happened())
             status.append(False)
         else:
             print("send() successful")
