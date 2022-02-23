@@ -110,7 +110,7 @@ def setup():
     # Set auto-retransmit limit
 
     # Set auto-ACK (This might fix available pipe always returning true, could also be broken module)
-    rx_radio.setAutoAck(False)
+    #rx_radio.setAutoAck(False)
 
     # Set channel
     rx_radio.setChannel(108)
@@ -121,7 +121,7 @@ def setup():
     # Open pipes
     for pipe, address in enumerate(PIPE_ADDRESSES):
         rx_radio.openReadingPipe(pipe, address)
-        tx_radio.openWritingPipe(pipe, address)
+        #tx_radio.openWritingPipe(pipe, address)
 
     # Flush buffers
     rx_radio.flush_rx()
@@ -196,7 +196,7 @@ def receive(rx_radio, timeout):
 
         #Checks if there are bytes available for read
         payload_available, pipe_nbr = rx_radio.available_pipe()
-        print("Radio available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
+        print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
 
         if(payload_available):
 
