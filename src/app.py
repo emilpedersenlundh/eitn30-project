@@ -1,17 +1,20 @@
+#!/home/fideloper/.envs/eitn30-project/bin/python3
+
+from ast import Bytes
+from ctypes import c_byte, c_uint, c_uint16, c_uint32, c_uint8
 import sys
 import argparse
 import time
 import struct
+import typing
 import board
 import digitalio
-import requests
-import socket
 import numpy as np
+import RPi.GPIO as GPIO
 
-from matplotlib import use
 from RF24 import RF24, RF24_PA_LOW
 
-SPI_SPEED = 10000000 #Hz
+SPI_SPEED: c_uint32 = 10000000 #Hz
 LOCAL_ADDRESS = [] #Lägga in lokal ip
 
 LOCAL_PACKET = {
@@ -23,33 +26,52 @@ LOCAL_PACKET = {
 }
 
 #6 slots for addresses
-IP_TABLE = np.array([-1 for _ in range(6)])
+IP_TABLE = np.array([1 for _ in range(6)])
 
-#Data buffer for all pipes in rx (128 bytes) 
+#Data buffer for all pipes in rx (128 bytes)
 DATA_BUFFER = np.array([[np.int8 for _ in range(128)] for _ in range(len(IP_TABLE))])
 
-SPI0 = {
+SPI0: c_uint16 = {
+    'SPI':0,
     'MOSI':10,#dio.DigitalInOut(board.D10),
     'MISO':9,#dio.DigitalInOut(board.D9),
     'clock':11,#dio.DigitalInOut(board.D11),
-    'ce':digitalio.DigitalInOut(board.D17),
-    'csn':digitalio.DigitalInOut(board.D8),
+    'ce':17,#digitalio.DigitalInOut(board.D17),
+    'csn':8#digitalio.DigitalInOut(board.D8),
     }
-SPI1 = {
+SPI1: c_uint16 = {
+    'SPI':10,
     'MOSI':20,#dio.DigitalInOut(board.D10),
     'MISO':19,#dio.DigitalInOut(board.D9),
     'clock':21,#dio.DigitalInOut(board.D11),
-    'ce':d.DigitalInOut(board.D27),
-    'csn':dio.DigitalInOut(board.D18),
+    'ce':27,#digitalio.DigitalInOut(board.D27),
+    'csn':18#digitalio.DigitalInOut(board.D18),
     }
 
-print()
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(SPI0['csn'], GPIO.OUT)
+GPIO.setup(SPI0['ce'], GPIO.OUT)
+GPIO.setup(SPI0['MOSI'], GPIO.OUT)
+GPIO.setup(SPI0['MISO'], GPIO.IN)
+GPIO.setup(SPI1['csn'], GPIO.OUT)
+GPIO.setup(SPI1['ce'], GPIO.OUT)
+GPIO.setup(SPI1['MOSI'], GPIO.OUT)
+GPIO.setup(SPI1['MISO'], GPIO.IN)
+GPIO.setup(SPI1['clock'], GPIO.OUT)
+
 
 
 ### Implement separate socket server which listens to the virtual interface and relays packets (also implements sending packets, i.e. the reverse)
 
-tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
-rx_radio = RF24(SPI1['ce'], SPI1['csn'], SPI_SPEED)
+#tx_radio = RF24(SPI0['SPI'],SPI0['csn'], SPI0['ce'], SPI_SPEED)
+#rx_radio = RF24(SPI1['SPI'],SPI1['csn'], SPI1['ce'], SPI_SPEED)
+#tx_radio = RF24(SPI0['ce'], SPI0['SPI'], SPI_SPEED)
+#rx_radio = RF24(SPI1['ce'], SPI1['SPI'], SPI_SPEED)
+# tx_radio = RF24(17, 0)
+# rx_radio = RF24(27, 10)
+
+tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
+rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
 
 def setup():
     # Initialize radio, if error: return runtime error
@@ -63,7 +85,12 @@ def setup():
     # Set data rate
     # Set payload size (dynamic/static)
 
-    print("Setup")
+    #Initiate IP-table
+
+    #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI1['csn'] , SPI1['ce'] , SPI_SPEED))
+    #rx_radio.begin(SPI1['ce'], SPI1['ce'], SPI1['csn'])
+    rx_radio.begin(SPI1['ce'], SPI1['ce'], SPI1['csn'])
+    tx_radio.begin(SPI0['ce'], SPI0['ce'], SPI0['csn'])
 
 ## Control plane
 def discover():
@@ -78,8 +105,7 @@ def authenticate():
 
 def associate():
     # Add node to address array with lease timestamp
-    # If TDMA: Add to schedule, sync clocks
-    # Else apply random access scheme
+    # Set staggered retransmit delay if enabled
     print("Associate")
 
 def disassociate():
@@ -117,8 +143,8 @@ def transmit(tx_radio, address):
         count -= 1
     total_time = time.monotonic() - start
 
-    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
-
+    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), 32*8*len(status)/total_time))
+    #TODO: Replace ^ 32 with size
 def receive(rx_radio, timeout):
     # Make sure all 6 pipes are open
     for index, address in enumerate(IP_TABLE):
@@ -126,6 +152,22 @@ def receive(rx_radio, timeout):
             rx_radio.openReadingPipe(index, address)
     # Start listening
     bytes(2).decode
+    #index: bytes
+    #address: bytes
+    #for index, address in enumerate(IP_TABLE):
+    #address: Bytes = [
+    #    0xCC,
+    #    0xCE,
+    #    0xCC,
+    #    0xCE,
+    #    0xCC
+    #]
+    pipe = 0
+    address = b"\xF1\xB6\xB5\xB4\xB3"
+    width: c_uint8 = 5
+    rx_radio.setAddressWidth(width)
+    rx_radio.openReadingPipe(1, address)
+    # Start listening'
     rx_radio.startListening()
     start = time.time()
     # Timeout condition
@@ -134,11 +176,11 @@ def receive(rx_radio, timeout):
         payload_available, pipe_nbr = rx_radio.available_pipe()
         if(payload_available):
             # If has payload, read radio packet size
-            payload_size = rx_radio.getDynamicPayloadSize() 
+            payload_size = rx_radio.getDynamicPayloadSize()
             datatest = rx_radio.read(payload_size)
-            DATA_BUFFER[pipe_nbr] = rx_radio.read(payload_size)
+            DATA_BUFFER[pipe_nbr] = datatest
             print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, datatest))
-    print("Receiver")
+    print("Timeout")
 
 def construct_packet(dest, data):
     header = {
@@ -211,21 +253,19 @@ def mode(userinput: str=""):
     return mode
 
 if __name__ == "__main__":
-    print("lol")
+
+    setup()
     dest_addr = 1
-    runtime = 5000
+    duration = 5000
     role = mode(sys.argv[0])
     count = 3
 
     while count:
         if(role == "BASE"):
             start = time.time()
-            while(time.time() - start < runtime):
+            while(time.time() - start < duration):
                 transmit(tx_radio, dest_addr)
         else:
             start = time.time()
-            receive(rx_radio, runtime)
+            receive(rx_radio, duration)
         count -= 1
-
-    
-
