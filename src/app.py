@@ -82,7 +82,7 @@ GPIO.setup(SPI1['clock'], GPIO.OUT) """
 tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
 rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
 
-def setup():
+def setup(mode_select: str="NODE"):
 
     # Initialize radio, if error: return runtime error
     rx_radio.begin()
@@ -120,8 +120,10 @@ def setup():
 
     # Open pipes
     for pipe, address in enumerate(PIPE_ADDRESSES):
-        rx_radio.openReadingPipe(pipe, address)
-        #tx_radio.openWritingPipe(pipe, address)
+        if(mode_select == "NODE"):
+            rx_radio.openReadingPipe(pipe, address)
+        else:
+            tx_radio.openWritingPipe(pipe, address)
 
     # Flush buffers
     rx_radio.flush_rx()
@@ -325,10 +327,12 @@ def mode(userinput: str=""):
 
 if __name__ == "__main__":
 
-    setup()
+    mode_select = input("Select mode (BASE or NODE)")
+
+    setup(mode_select)
     dest_addr = 1
     duration = 5000
-    role = mode(input("Select mode (BASE or NODE)"))
+    role = mode(mode_select)
     count = 3
 
     while count:
