@@ -185,6 +185,7 @@ def transmit(tx_radio, address):
     status = []
     buffer = np.random.bytes(size)
 
+    tx_radio.stopListening()
     start = time.monotonic()
     while count:
         # use struct.pack to packetize your data
@@ -206,7 +207,7 @@ def transmit(tx_radio, address):
         count -= 1
     total_time = time.monotonic() - start
 
-    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
+    print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
 
 def receive(rx_radio, timeout):
 
@@ -231,7 +232,7 @@ def receive(rx_radio, timeout):
 
             # Insert payload into data buffer
             DATA_BUFFER[pipe_nbr] = np.array([payload])
-            print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, np.ravel(DATA_BUFFER[pipe_nbr])))
+            print("Received a payload in pipe {} of size {} bytes and data {}\n".format(pipe_nbr, payload_size, np.ravel(DATA_BUFFER[pipe_nbr])))
 
             # Flush rx buffer
             #rx_radio.flush_rx()
@@ -367,7 +368,9 @@ try:
         count -= 1
 except KeyboardInterrupt:
     print("----Keyboard interrupt----\n")
-    print("RX Radio Details: \n")
-    rx_radio.printPrettyDetails()
-    print("\nTX Radio Details:\n")
-    tx_radio.printPrettyDetails()
+    if (role == "NODE"):
+        print("RX Radio Details: \n")
+        rx_radio.printPrettyDetails()
+    if (role == "BASE"):
+        print("\nTX Radio Details:\n")
+        tx_radio.printPrettyDetails()
