@@ -11,10 +11,10 @@ import typing
 import numpy as np
 import RPi.GPIO as GPIO
 
-from RF24 import RF24, RF24_PA_LOW
+from RF24 import RF24
+from RF24 import RF24_PA_LOW, RF24_PA_MAX, RF24_2MBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
 
 SPI_SPEED: c_uint32 = 10000000 #Hz
-DATA_RATE: int = 1 #2 MBPS
 A_WIDTH: c_uint8 = 5
 LOCAL_ADDRESS = [] #Lägga in lokal ip
 
@@ -31,6 +31,8 @@ IP_TABLE = np.array([1 for _ in range(6)])
 
 #Data buffer for all pipes in rx (128 bytes)
 DATA_BUFFER = np.array([[] for _ in range(len(IP_TABLE))])
+
+# Config value arrays
 
 SPI0 = {
     'SPI':0,
@@ -69,23 +71,6 @@ PIPE_ADDRESSES = [
 ]
 """
 
-
-""" GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-GPIO.setup(SPI0['csn'], GPIO.OUT)
-GPIO.setup(SPI0['ce'], GPIO.OUT)
-GPIO.setup(SPI0['MOSI'], GPIO.OUT)
-GPIO.setup(SPI0['MISO'], GPIO.IN)
-GPIO.setup(SPI1['csn'], GPIO.OUT)
-GPIO.setup(SPI1['ce'], GPIO.OUT)
-GPIO.setup(SPI1['MOSI'], GPIO.OUT)
-GPIO.setup(SPI1['MISO'], GPIO.IN)
-GPIO.setup(SPI1['clock'], GPIO.OUT) """
-
-
-
-### Implement separate socket server which listens to the virtual interface and relays packets (also implements sending packets, i.e. the reverse)
-
 #tx_radio = RF24(SPI0['SPI'],SPI0['csn'], SPI0['ce'], SPI_SPEED)
 #rx_radio = RF24(SPI1['SPI'],SPI1['csn'], SPI1['ce'], SPI_SPEED)
 #tx_radio = RF24(SPI0['ce'], SPI0['csn'], SPI_SPEED)
@@ -93,8 +78,13 @@ GPIO.setup(SPI1['clock'], GPIO.OUT) """
 #tx_radio = RF24(17, 0)
 #rx_radio = RF24(27, 10)
 
+
+# Declare radio objects
+
 tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
 rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
+
+# Functions
 
 def setup(mode_select: str="NODE"):
 
@@ -137,8 +127,8 @@ def setup(mode_select: str="NODE"):
     tx_radio.setChannel(76)
 
     # Set data rate
-    #rx_radio.setDataRate(DATA_RATE)
-    #tx_radio.setDataDate(DATA_RATE)
+    rx_radio.setDataRate(RF24_2MBPS)
+    tx_radio.setDataRate(RF24_2MBPS)
 
     # Open pipes
     for pipe, address in enumerate(PIPE_ADDRESSES):
@@ -198,7 +188,7 @@ def transmit(tx_radio, address):
         result = tx_radio.write(buffer, False)
         if not result:
             print("send() failed or timed out")
-            #print(tx_radio.what_happened())
+            #tx_radio.whatHappened()
             status.append(False)
         else:
             print("send() successful")
@@ -349,7 +339,7 @@ def mode(userinput: str=""):
 
 if __name__ == "__main__":
 
-    mode_select = input("Select mode (BASE or NODE)").upper()
+    mode_select = input("Select mode (BASE or NODE): ").upper()
 
     setup(mode_select)
     dest_addr = 1
@@ -367,7 +357,7 @@ try:
             receive(rx_radio, duration)
         count -= 1
 except KeyboardInterrupt:
-    print("----Keyboard interrupt----\n")
+    print("\n----Keyboard interrupt----\n")
     if (role == "NODE"):
         print("RX Radio Details: \n")
         rx_radio.printPrettyDetails()
