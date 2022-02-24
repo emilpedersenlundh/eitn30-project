@@ -127,7 +127,7 @@ def setup(mode_select: str="NODE"):
     # Set auto-retransmit limit
 
     # Set auto-ACK (This might fix available pipe always returning true, could also be broken module)
-    #rx_radio.setAutoAck(False)
+    rx_radio.setAutoAck(True)
 
     # Set channel
     # Testa kanal 76
@@ -143,10 +143,8 @@ def setup(mode_select: str="NODE"):
         if(mode_select == "NODE"):
             rx_radio.openReadingPipe(pipe, address)
             print("Opened reading pipe: {} with address: {}".format(pipe, address))
-        else:
-            #tx_radio.openWritingPipe(address)
-            print("Opened writing pipe with address: {}".format(address))
-    tx_radio.openWritingPipe(PIPE_ADDRESSES[1])
+    tx_radio.openWritingPipe(PIPE_ADDRESSES[0])
+    print("Opened writing pipe with address: {}".format(address))
 
     # Flush buffers
     rx_radio.flush_rx()
