@@ -101,9 +101,11 @@ def setup(mode_select: str="NODE"):
     # Initialize radio, if error: return runtime error
 
     if not rx_radio.begin():
+        rx_radio.printPrettyDetails()
         raise RuntimeError("RX Radio is inactive.")
 
     if not tx_radio.begin():
+        tx_radio.printPrettyDetails()
         raise RuntimeError("TX Radio is inactive.")
 
     # Set power amplifier level
@@ -218,7 +220,7 @@ def receive(rx_radio, timeout):
 
         #Checks if there are bytes available for read
         payload_available, pipe_nbr = rx_radio.available_pipe()
-        
+
         if(payload_available):
 
             print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
@@ -353,7 +355,7 @@ if __name__ == "__main__":
     duration = 5000
     role = mode(mode_select)
     count = 3
-
+try:
     while count:
         if(role == "BASE"):
             start = time.time()
@@ -363,3 +365,9 @@ if __name__ == "__main__":
             start = time.time()
             receive(rx_radio, duration)
         count -= 1
+except KeyboardInterrupt:
+    print("----Keyboard interrupt----\n")
+    print("RX Radio Details: \n")
+    rx_radio.printPrettyDetails()
+    print("\nTX Radio Details:\n")
+    tx_radio.printPrettyDetails()
