@@ -15,24 +15,20 @@ from RF24 import RF24
 from RF24 import RF24_PA_LOW, RF24_PA_MAX, RF24_2MBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
 
 SPI_SPEED: c_uint32 = 10000000 #Hz
-A_WIDTH: c_uint8 = 5
-LOCAL_ADDRESS = [] #Lägga in lokal ip
-
-LOCAL_PACKET = {
-    #Preamble
-    #Address
-    #Packet control field: Payload length, Packet ID, No ACK
-    #Payload
-    #CRC
-}
+CHANNEL: c_uint8 = 76 #2.4G + channel Hz
+A_WIDTH: c_uint8 = 5 #2-5 bytes
+RT_DELAY: c_uint8 = 0 #0-15 (250-4000 microseconds)
+RT_LIMIT: c_uint8 = 15 #0-15 (0 = Disabled)
 
 #6 slots for addresses
 IP_TABLE = np.array([1 for _ in range(6)])
 
+LOCAL_ADDRESS = []
+
 #Data buffer for all pipes in rx (128 bytes)
 DATA_BUFFER = np.array([[] for _ in range(len(IP_TABLE))])
 
-# Config value arrays
+#Config value arrays
 
 SPI0 = {
     'SPI':0,
@@ -80,16 +76,13 @@ PIPE_ADDRESSES = [
 
 
 # Declare radio objects
-
 tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
 rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
 
 # Functions
-
 def setup(mode_select: str="NODE"):
 
     # Initialize radio, if error: return runtime error
-
     if not rx_radio.begin():
         rx_radio.printPrettyDetails()
         raise RuntimeError("RX Radio is inactive.")
@@ -107,24 +100,28 @@ def setup(mode_select: str="NODE"):
     tx_radio.enableDynamicPayloads()
 
     # Set CRC encoding
+    rx_radio.setCRCLength(RF24_CRC_16)
+    tx_radio.setCRCLength(RF24_CRC_16)
 
     # Set CRC enable/disable
+    #rx_radio.disableCRC()
+    #tx_radio.disableCRC()
+
+    # Set auto-ACK (If false: CRC has to be disabled)
+    rx_radio.setAutoAck(True)
+    tx_radio.setAutoAck(True)
 
     # Set address A_WIDTH
     rx_radio.setAddressWidth(A_WIDTH)
     tx_radio.setAddressWidth(A_WIDTH)
 
-    # Set auto-retransmit delay
-
-    # Set auto-retransmit limit
-
-    # Set auto-ACK (This might fix available pipe always returning true, could also be broken module)
-    rx_radio.setAutoAck(True)
+    # Set auto-retransmit delay & limit
+    rx_radio.setRetries(RT_DELAY, RT_LIMIT)
+    tx_radio.setRetries(RT_DELAY, RT_LIMIT)
 
     # Set channel
-    # Testa kanal 76
-    rx_radio.setChannel(76)
-    tx_radio.setChannel(76)
+    rx_radio.setChannel(CHANNEL)
+    tx_radio.setChannel(CHANNEL)
 
     # Set data rate
     rx_radio.setDataRate(RF24_2MBPS)
@@ -143,9 +140,6 @@ def setup(mode_select: str="NODE"):
     rx_radio.flush_tx()
     tx_radio.flush_rx()
     tx_radio.flush_tx()
-
-    #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI1['csn'] , SPI1['ce'] , SPI_SPEED))
-    #rx_radio.begin(SPI1['ce'], SPI1['ce'], SPI1['csn'])
 
 ## Control plane
 def discover():
@@ -356,6 +350,7 @@ try:
             start = time.time()
             receive(rx_radio, duration)
         count -= 1
+
 except KeyboardInterrupt:
     print("\n----Keyboard interrupt----\n")
     if (role == "NODE"):
