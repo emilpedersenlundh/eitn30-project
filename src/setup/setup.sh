@@ -81,6 +81,7 @@ echo "*** LibRF24 installed. ***"
 echo ""
 sudo apt-get install -y python3-dev libboost-python-dev python3-pip python3-rpi.gpio build-essential libatlas-base-dev
 sudo ln -s $(ls /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3*.so | tail -1) /usr/lib/$(ls /usr/lib/gcc | tail -1)/libboost_python3.so
+chmod u+x ${ROOT_PATH}/RF24/examples_linux/getting_started.py
 
 #Install Python3 setuptools globally
 python3 -m pip install --upgrade pip setuptools

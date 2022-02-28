@@ -9,26 +9,27 @@ import time
 import struct
 import typing
 import numpy as np
+from sklearn import cluster
 import RPi.GPIO as GPIO
 
-from RF24 import RF24, RF24_PA_LOW
+from RF24 import RF24
+from RF24 import RF24_PA_LOW, RF24_PA_MAX, RF24_2MBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
 
 SPI_SPEED: c_uint32 = 10000000 #Hz
-LOCAL_ADDRESS = [] #Lägga in lokal ip
-
-LOCAL_PACKET = {
-    #Preamble
-    #Address
-    #Packet control field: Payload length, Packet ID, No ACK
-    #Payload
-    #CRC
-}
+CHANNEL: c_uint8 = 76 #2.4G + channel Hz
+A_WIDTH: c_uint8 = 5 #2-5 bytes
+RT_DELAY: c_uint8 = 0 #0-15 (250-4000 microseconds)
+RT_LIMIT: c_uint8 = 15 #0-15 (0 = Disabled)
 
 #6 slots for addresses
 IP_TABLE = np.array([1 for _ in range(6)])
 
+LOCAL_ADDRESS = []
+
 #Data buffer for all pipes in rx (128 bytes)
 DATA_BUFFER = np.array([[] for _ in range(len(IP_TABLE))])
+
+#Config value arrays
 
 SPI0 = {
     'SPI':0,
@@ -47,33 +48,25 @@ SPI1 = {
     'csn':18#digitalio.DigitalInOut(board.D18),
     }
 
-PIPE_ADDRESSES = [[
+PIPE_ADDRESSES = [
+    b"\xE7\xD3\xF0\x35\x77",
+    b"\xC2\xC2\xC2\xC2\xC2",
+    b"\xC2\xC2\xC2\xC2\xC3",
+    b"\xC2\xC2\xC2\xC2\xC4",
+    b"\xC2\xC2\xC2\xC2\xC5",
+    b"\xC2\xC2\xC2\xC2\xC6"
+]
+
+"""
+PIPE_ADDRESSES = [
     b"\x78" * 5,
     b"\xF1\xB6\xB5\xB4\xB3",
     b"\xCD\xB6\xB5\xB4\xB3",
     b"\xA3\xB6\xB5\xB4\xB3",
     b"\x0F\xB6\xB5\xB4\xB3",
     b"\x05\xB6\xB5\xB4\xB3"
-],
-[
-
-]]
-
-""" GPIO.setmode(GPIO.BCM)
-GPIO.setwarnings(False)
-GPIO.setup(SPI0['csn'], GPIO.OUT)
-GPIO.setup(SPI0['ce'], GPIO.OUT)
-GPIO.setup(SPI0['MOSI'], GPIO.OUT)
-GPIO.setup(SPI0['MISO'], GPIO.IN)
-GPIO.setup(SPI1['csn'], GPIO.OUT)
-GPIO.setup(SPI1['ce'], GPIO.OUT)
-GPIO.setup(SPI1['MOSI'], GPIO.OUT)
-GPIO.setup(SPI1['MISO'], GPIO.IN)
-GPIO.setup(SPI1['clock'], GPIO.OUT) """
-
-
-
-### Implement separate socket server which listens to the virtual interface and relays packets (also implements sending packets, i.e. the reverse)
+]
+"""
 
 #tx_radio = RF24(SPI0['SPI'],SPI0['csn'], SPI0['ce'], SPI_SPEED)
 #rx_radio = RF24(SPI1['SPI'],SPI1['csn'], SPI1['ce'], SPI_SPEED)
@@ -82,60 +75,72 @@ GPIO.setup(SPI1['clock'], GPIO.OUT) """
 #tx_radio = RF24(17, 0)
 #rx_radio = RF24(27, 10)
 
+
+# Declare radio objects
 tx_radio = RF24(SPI0['ce'], SPI0['SPI'])
 rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
 
-def setup():
+# Functions
+def setup(mode_select: str="NODE"):
 
     # Initialize radio, if error: return runtime error
-    rx_radio.begin()
-    tx_radio.begin()
+    if not rx_radio.begin():
+        rx_radio.printPrettyDetails()
+        raise RuntimeError("RX Radio is inactive.")
+
+    if not tx_radio.begin():
+        tx_radio.printPrettyDetails()
+        raise RuntimeError("TX Radio is inactive.")
 
     # Set power amplifier level
     rx_radio.setPALevel(RF24_PA_LOW)
     tx_radio.setPALevel(RF24_PA_LOW)
 
     # Set payload size (dynamic/static)
-    rx_radio.enableDynamicPayloads
-    tx_radio.enableDynamicPayloads
+    rx_radio.enableDynamicPayloads()
+    tx_radio.enableDynamicPayloads()
 
     # Set CRC encoding
+    rx_radio.setCRCLength(RF24_CRC_16)
+    tx_radio.setCRCLength(RF24_CRC_16)
 
     # Set CRC enable/disable
+    #rx_radio.disableCRC()
+    #tx_radio.disableCRC()
 
-    # Set address width
-    width: c_uint8 = 5
-    rx_radio.setAddressWidth(width)
-    tx_radio.setAddressWidth(width)
+    # Set auto-ACK (If false: CRC has to be disabled)
+    rx_radio.setAutoAck(True)
+    tx_radio.setAutoAck(True)
 
-    # Set auto-retransmit delay
+    # Set address A_WIDTH
+    rx_radio.setAddressWidth(A_WIDTH)
+    tx_radio.setAddressWidth(A_WIDTH)
 
-    # Set auto-retransmit limit
-
-    # Set auto-ACK (This might fix available pipe always returning true, could also be broken module)
-    rx_radio.setAutoAck(False)
+    # Set auto-retransmit delay & limit
+    rx_radio.setRetries(RT_DELAY, RT_LIMIT)
+    tx_radio.setRetries(RT_DELAY, RT_LIMIT)
 
     # Set channel
-    rx_radio.setChannel(108)
-    tx_radio.setChannel(108)
+    rx_radio.setChannel(CHANNEL)
+    tx_radio.setChannel(CHANNEL)
 
     # Set data rate
+    rx_radio.setDataRate(RF24_2MBPS)
+    tx_radio.setDataRate(RF24_2MBPS)
 
     # Open pipes
     for pipe, address in enumerate(PIPE_ADDRESSES):
-        rx_radio.openReadingPipe(pipe, address)
-        tx_radio.openWritingPipe(pipe, address)
+        if(mode_select == "NODE"):
+            rx_radio.openReadingPipe(pipe, address)
+            print("Opened reading pipe: {} with address: {}".format(pipe, address))
+    tx_radio.openWritingPipe(PIPE_ADDRESSES[0])
+    print("Opened writing pipe with address: {}".format(address))
 
     # Flush buffers
     rx_radio.flush_rx()
     rx_radio.flush_tx()
     tx_radio.flush_rx()
     tx_radio.flush_tx()
-
-    #Initiate IP-table
-
-    #print ("csn: {}, ce: {}, SPIspeed: {}".format(SPI1['csn'] , SPI1['ce'] , SPI_SPEED))
-    #rx_radio.begin(SPI1['ce'], SPI1['ce'], SPI1['csn'])
 
 ## Control plane
 def discover():
@@ -158,35 +163,62 @@ def disassociate():
     # Remove node from address array
     print("Disassociate")
 
-def transmit(tx_radio, address):
+def fragment(data):
+
+    chunk_size = 32
+    nbr_chunks = 0
+    data_length = len(data)
+
+    if((data_length % chunk_size) == 0):
+        nbr_chunks = data_length / chunk_size
+    else:
+        nbr_chunks = (data_length - (data_length % chunk_size)) + 1
+
+        #Padding with zeroes followed by padding size (max 31B)
+        padding = [b"\x00" for _ in range(chunk_size - (data_length % chunk_size))]
+        #Add length of padding in the last byte (unclear if this will be interpreted as a byte)
+        padding[len(padding) - 1] = padding[len(padding - 1)] | (len(padding) & 0xFF)
+        data.append(padding)
+
+    #Insert in numpy array and reshape into 32B clusters
+    fragmented = np.array(data).reshape(nbr_chunks, chunk_size)
+
+    return fragmented
+
+
+def transmit(tx_radio, address, data):
 
     count = 10
     size = 32
     status = []
     buffer = np.random.bytes(size)
 
+    #Fragment the data into chunks (n chunks * 32 matrix, each line is a chunk)
+    chunks = fragment(data)
+
+    tx_radio.stopListening()
     start = time.monotonic()
     while count:
         # use struct.pack to packetize your data
         # into a usable payload
 
-        buffer = struct.pack("<", count)
+        buffer = struct.pack("<i", count)
         # 'i' means a single 4 byte int value.
         # '<' means little endian byte order. this may be optional
         print("Sending: {} as struct: {}".format(count, buffer))
-        result = tx_radio.send(buffer)
+        result = tx_radio.write(buffer, False)
         if not result:
-            #print("send() failed or timed out")
-            #print(tx_radio.what_happened())
+            print("send() failed or timed out")
+            #tx_radio.whatHappened()
             status.append(False)
         else:
-            #print("send() successful")
+            print("send() successful")
             status.append(True)
         # print timer results despite transmission success
         count -= 1
     total_time = time.monotonic() - start
 
-    print('{} successfull transmissions, {} failures, {} bps'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
+    print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
 
 def receive(rx_radio, timeout):
 
@@ -195,24 +227,23 @@ def receive(rx_radio, timeout):
     # Start listening
     rx_radio.startListening()
     start = time.time()
-
     # Timeout condition
     while(time.time() - start < timeout):
 
         #Checks if there are bytes available for read
         payload_available, pipe_nbr = rx_radio.available_pipe()
-        print("Radio available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
 
         if(payload_available):
 
+            print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
             # If has payload, read radio packet size
             payload_size = rx_radio.getDynamicPayloadSize()
-            payload = struct.unpack(rx_radio.read("<", payload_size))
+            payload = struct.unpack("<i", rx_radio.read(payload_size))
             print("Payload size = {} \nPayload = {}".format(payload_size, np.ravel(np.array(payload))))
             
             # Insert payload into data buffer
             DATA_BUFFER[pipe_nbr] = np.array([payload])
-            print("Received a payload in pipe {} of size {}bytes and data {}".format(pipe_nbr, payload_size, np.ravel(DATA_BUFFER[pipe_nbr])))
+            print("Received a payload in pipe {} of size {} bytes and data {}\n".format(pipe_nbr, payload_size, np.ravel(DATA_BUFFER[pipe_nbr])))
 
             # Flush rx buffer
             #rx_radio.flush_rx()
@@ -318,8 +349,9 @@ def construct_packet(dest_address: string, data: list, broadcast: bool = False):
 
 def mode(userinput: str=""):
     mode = ""
-    if userinput.upper() == "BASE" or userinput.upper == "NODE":
-        mode = userinput.upper()
+    print(userinput)
+    if userinput == "BASE" or userinput == "NODE":
+        mode = userinput
     else:
         print("No mode specified, defaulting to NODE..")
         mode = "NODE"
@@ -328,12 +360,14 @@ def mode(userinput: str=""):
 
 if __name__ == "__main__":
 
-    setup()
+    mode_select = input("Select mode (BASE or NODE): ").upper()
+
+    setup(mode_select)
     dest_addr = 1
     duration = 5000
-    role = mode(sys.argv[0])
+    role = mode(mode_select)
     count = 3
-
+try:
     while count:
         if(role == "BASE"):
             start = time.time()
@@ -343,3 +377,12 @@ if __name__ == "__main__":
             start = time.time()
             receive(rx_radio, duration)
         count -= 1
+
+except KeyboardInterrupt:
+    print("\n----Keyboard interrupt----\n")
+    if (role == "NODE"):
+        print("RX Radio Details: \n")
+        rx_radio.printPrettyDetails()
+    if (role == "BASE"):
+        print("\nTX Radio Details:\n")
+        tx_radio.printPrettyDetails()
