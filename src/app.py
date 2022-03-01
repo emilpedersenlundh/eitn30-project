@@ -165,22 +165,26 @@ def disassociate():
 
 def fragment(data):
 
-    chunk_size = 32
     nbr_chunks = 0
     data_length = len(data)
+    """
+    Chunk size < 32 to have space for an id byte when sending (MAKE THIS DYNAMIC IF POSSIBLE)
+    if 31 is used, 1B can be used as id -> Able to send 256 * 31 = 7936B in total, if 30 is used id=2B 65536 * 30 = 1966080B can be sent
+    """
+    chunk_size = 30
 
     if((data_length % chunk_size) == 0):
         nbr_chunks = data_length / chunk_size
     else:
         nbr_chunks = (data_length - (data_length % chunk_size)) + 1
 
-        #Padding with zeroes followed by padding size (max 31B)
+        #Padding with zeroes followed by padding size (max chunk_size  - 1 B)
         padding = [b"\x00" for _ in range(chunk_size - (data_length % chunk_size))]
-        #Add length of padding in the last byte (unclear if this will be interpreted as a byte)
+        #Add length of padding in the last byte (unclear if this will be interpreted as a byte (can also try +=))
         padding[len(padding) - 1] = padding[len(padding - 1)] | (len(padding) & 0xFF)
         data.append(padding)
 
-    #Insert in numpy array and reshape into 32B clusters
+    #Insert in numpy array and reshape into chunk_size B clusters
     fragmented = np.array(data).reshape(nbr_chunks, chunk_size)
 
     return fragmented
@@ -193,29 +197,32 @@ def transmit(tx_radio, address, data):
     status = []
     buffer = np.random.bytes(size)
 
-    #Fragment the data into chunks (n chunks * 32 matrix, each line is a chunk)
+    #Fragment the data into chunks (n chunks * chunk size (31) matrix, each line is a chunk)
     chunks = fragment(data)
 
     tx_radio.stopListening()
-    start = time.monotonic()
-    while count:
-        # use struct.pack to packetize your data
-        # into a usable payload
 
-        buffer = struct.pack("<i", count)
-        # 'i' means a single 4 byte int value.
-        # '<' means little endian byte order. this may be optional
-        print("Sending: {} as struct: {}".format(count, buffer))
-        result = tx_radio.write(buffer, False)
-        if not result:
-            print("send() failed or timed out")
-            #tx_radio.whatHappened()
-            status.append(False)
-        else:
-            print("send() successful")
-            status.append(True)
-        # print timer results despite transmission success
-        count -= 1
+    start = time.monotonic()
+    if(chunks.size != 0):
+
+        id = 0
+        #Data available to send
+        for chunk in chunks:
+
+            #Again unclear if this will be identified as bytes (<H little endian 16bit unsigned int hopefully)
+            np.append(chunk, struct.pack("<H", id))
+            #Send all chunks one at a time
+            buffer = bytes(chunk.data)
+            print("Sending: {} as struct: {}".format(chunk, buffer))
+
+            result = tx_radio.write(buffer, False)
+            if not result:
+                print("send() failed or timed out")
+                status.append(False)
+            else:
+                print("send() successful")
+                status.append(True)
+            id += 1
     total_time = time.monotonic() - start
 
     print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
