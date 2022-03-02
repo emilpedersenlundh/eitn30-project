@@ -9,8 +9,7 @@ import time
 import struct
 import typing
 import numpy as np
-from sklearn import cluster
-import RPi.GPIO as GPIO
+from RPi import GPIO
 
 from RF24 import RF24
 from RF24 import RF24_PA_LOW, RF24_PA_MAX, RF24_2MBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
@@ -247,7 +246,7 @@ def receive(rx_radio, timeout):
             payload_size = rx_radio.getDynamicPayloadSize()
             payload = struct.unpack("<i", rx_radio.read(payload_size))
             print("Payload size = {} \nPayload = {}".format(payload_size, np.ravel(np.array(payload))))
-            
+
             # Insert payload into data buffer
             DATA_BUFFER[pipe_nbr] = np.array([payload])
             print("Received a payload in pipe {} of size {} bytes and data {}\n".format(pipe_nbr, payload_size, np.ravel(DATA_BUFFER[pipe_nbr])))
