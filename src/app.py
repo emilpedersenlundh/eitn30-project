@@ -46,7 +46,7 @@ SPI1 = {
     'ce':27,#digitalio.DigitalInOut(board.D27),
     'csn':18#digitalio.DigitalInOut(board.D18),
     }
-
+# TODO fix addresses to big endian
 PIPE_ADDRESSES = [
     b"\xE7\xD3\xF0\x35\x77",
     b"\xC2\xC2\xC2\xC2\xC2",
@@ -167,7 +167,7 @@ def fragment(data):
     nbr_chunks = 0
     data_length = len(data)
     """
-    Chunk size < 32 to have space for an id byte when sending (MAKE THIS DYNAMIC IF POSSIBLE)
+    Chunk size < 32 to have space for an id byte when sending
     if 31 is used, 1B can be used as id -> Able to send 256 * 31 = 7936B in total, if 30 is used id=2B 65536 * 30 = 1966080B can be sent
     """
     chunk_size = 30
@@ -175,26 +175,26 @@ def fragment(data):
     if((data_length % chunk_size) == 0):
         nbr_chunks = data_length / chunk_size
     else:
-        nbr_chunks = (data_length - (data_length % chunk_size)) + 1
+        nbr_chunks = int((data_length - (data_length % chunk_size)) / chunk_size) + 1
 
         #Padding with zeroes followed by padding size (max chunk_size  - 1 B)
-        padding = [b"\x00" for _ in range(chunk_size - (data_length % chunk_size))]
-        #Add length of padding in the last byte (unclear if this will be interpreted as a byte (can also try +=))
-        padding[len(padding) - 1] = padding[len(padding - 1)] | (len(padding) & 0xFF)
-        data.append(padding)
+        padding = [0 for _ in range(chunk_size - (data_length % chunk_size))]
+        print(bytes(padding))
+        #Add length of padding in the last byte
+        print("Number of padding bytes = {}".format(len(padding)))
+        padding[len(padding) - 1] += len(padding)
+        data += bytes(padding)
+        print("Data = {}".format(bytearray(data)))
 
-    #Insert in numpy array and reshape into chunk_size B clusters
-    fragmented = np.array(data).reshape(nbr_chunks, chunk_size)
+    #Insert in numpy array and reshape into nbr_chunks clusters of size chunk_size
+    fragmented = np.array(bytearray(data)).reshape(nbr_chunks, chunk_size)
 
     return fragmented
 
 
 def transmit(tx_radio, address, data):
 
-    count = 10
-    size = 32
     status = []
-    buffer = np.random.bytes(size)
 
     #Fragment the data into chunks (n chunks * chunk size (31) matrix, each line is a chunk)
     chunks = fragment(data)
@@ -204,13 +204,10 @@ def transmit(tx_radio, address, data):
     start = time.monotonic()
     if(chunks.size != 0):
 
-        id = 0
-        #Data available to send
-        for chunk in chunks:
-
-            #Again unclear if this will be identified as bytes (<H little endian 16bit unsigned int hopefully)
-            np.append(chunk, struct.pack("<H", id))
-            #Send all chunks one at a time
+        #If it has only 1 row, then id = 0x0000
+        if(chunks.shape[0] == 1):
+            id = 0
+            np.append(chunks, struct.pack("<H", id))
             buffer = bytes(chunk.data)
             print("Sending: {} as struct: {}".format(chunk, buffer))
 
@@ -221,7 +218,27 @@ def transmit(tx_radio, address, data):
             else:
                 print("send() successful")
                 status.append(True)
-            id += 1
+        #Otherwise send all available chunks and append id > 0
+        else:
+            id = 1
+            nbr_chunks = chunks.shape[0]
+            #Data available to send
+            for chunk in chunks:
+
+                #Again unclear if this will be identified as bytes (<H little endian 16bit unsigned int hopefully)
+                np.append(chunk, struct.pack("<H", id))
+                #Send all chunks one at a time
+                buffer = bytes(chunk.data)
+                print("Sending chunk {} of {} with data: {} as struct {}, ".format(id, nbr_chunks, chunk, buffer))
+
+                result = tx_radio.write(buffer, False)
+                if not result:
+                    print("send() failed or timed out")
+                    status.append(False)
+                else:
+                    print("send() successful")
+                    status.append(True)
+                id += 1
     total_time = time.monotonic() - start
 
     print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
