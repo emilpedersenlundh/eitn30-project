@@ -5,14 +5,22 @@ import fcntl
 import struct
 from multiprocessing import Process
 import socket
+import scapy.all as scapy
 from tuntap import TunTap
 
 INTERFACE = ''
 PORT=5000
 
-with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-    s.bind((INTERFACE,PORT))
-    s.listen(1)
+class Server:
+
+    def __init__(self) -> None:
+        # Local variables
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def open_socket(self, interface, port):
+        # Check input parameters
+        self.s.bind((interface, port))
+        self.s.listen(1)
 
 #TODO: Implement send and receive on socket
 
