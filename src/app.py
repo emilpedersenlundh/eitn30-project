@@ -2,6 +2,7 @@
 
 import array
 from ctypes import c_byte, c_uint, c_uint16, c_uint32, c_uint8
+from ipaddress import ip_address
 import string
 import sys
 import argparse
@@ -192,7 +193,7 @@ def fragment(data):
 
     return fragmented.tolist()
 
-
+# @TODO How do we handle addresses etc in L2? do we need to?
 def transmit(tx_radio, address):
 
     time.sleep(5) #To power up node in time
@@ -210,23 +211,29 @@ def transmit(tx_radio, address):
 
         #If it has only 1 row, then id = 0x0000
         if(len(chunks) == 1):
+
             id = 0
             print("id = {}, and as struct = {}".format(id, struct.pack("<H", id)))
+
             chunk.append(struct.pack("<H", id))
             buffer = bytes(chunk)
-            print("Sending: {} as struct: {}".format(chunk, buffer))
 
+            print("Sending: {} as struct: {}".format(chunk, buffer))
             result = tx_radio.write(buffer, False)
+
             if not result:
                 print("send() failed or timed out")
                 status.append(False)
             else:
                 print("send() successful")
                 status.append(True)
+
         #Otherwise send all available chunks and append id > 0
         else:
+
             id = 1
             nbr_chunks = len(chunks)
+
             #Data available to send
             for index, chunk in enumerate(chunks):
 
@@ -234,36 +241,41 @@ def transmit(tx_radio, address):
 
                 #Last fragment part will have id 0
                 if(index == len(chunks) - 1):
-                    id = 0
+                    id = pow(2, 16) - 1 #0xFFFF
+
                 buffer = bytes(chunk)
                 buffer += struct.pack(">H", id)
 
                 #Send all chunks one at a time
                 print("Sending chunk {} of {} with data: {} as struct {}, ".format(id, nbr_chunks, chunk, buffer))
-
                 result = tx_radio.write(buffer, False)
+
                 if not result:
                     print("send() failed or timed out")
                     status.append(False)
                 else:
                     print("send() successful")
                     status.append(True)
+
                 id += 1
+                #Reduce speed for debug
                 time.sleep(1)
+
     total_time = time.monotonic() - start
 
     print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), nbr_chunks*len(chunks[0])*8*len(status)/total_time))
 
-#TODO fragment_buffer not appending for some reason..............................................................................................................
 def receive(rx_radio, timeout):
 
     print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(rx_radio.getPALevel(), SPI_SPEED))
 
-    fragmented = False
-    fragment_buffer = []
-    # Start listening
+    nbr_pipes = len(IP_TABLE)
+    fragmented = [False for _ in range(nbr_pipes)]
+    fragment_buffer = [[] for _ in range(nbr_pipes)]
+
     rx_radio.startListening()
     start = time.time()
+    
     # Timeout condition
     while(time.time() - start < timeout):
 
@@ -284,33 +296,34 @@ def receive(rx_radio, timeout):
             if(id == 1):
 
                 #First fragment
-                fragmented = True
+                fragmented[pipe_nbr] = True
                 print(bytes(payload[: payload_size - 2]))
-                fragment_buffer.append(bytes(payload[: payload_size - 2]))
+                fragment_buffer[pipe_nbr].append(bytes(payload[: payload_size - 2]))
                 print("Received first fragment (id: {}) \ndata = {}\n".format(id, fragment_buffer.pop()))
 
-            elif(id > 0 and fragmented):
+            elif(id > 0 and fragmented[pipe_nbr]):
 
                 #Fragmented data
                 print(bytes(payload[: payload_size - 2]))
-                fragment_buffer.append(str(bytes(payload[: payload_size - 2])))
-                print("Received fragment nbr: {} \ndata = {}\n".format(id, fragment_buffer.pop()))
+                fragment_buffer[pipe_nbr].append(str(bytes(payload[: payload_size - 2])))
+                print("Received fragment nbr: {} \ndata = {}\n".format(id, fragment_buffer[pipe_nbr].pop()))
 
             elif(id == 0):
 
-                print("fragment_buffer = {}".format(fragment_buffer))
+                print("fragment_buffer = {}".format(fragment_buffer[pipe_nbr]))
                 # Not fragmented, insert payload into data buffer and "push" fragment_buffer to data_buffer + clear fragment buff
-                print("fragmented = {}, len buff = {}".format(fragmented, len(fragment_buffer)))
+                print("fragmented = {}, len buff = {}".format(fragmented[pipe_nbr], len(fragment_buffer[pipe_nbr])))
 
-                if(fragmented and len(fragment_buffer) != 0):
+                if(fragmented[pipe_nbr] and len(fragment_buffer[pipe_nbr]) != 0):
 
                     data_buffer[pipe_nbr].append([x for x in fragment_buffer])
-                    fragment_buffer.clear()
+                    fragment_buffer[pipe_nbr].clear()
                     print("All fragments received!")
-
-                fragmented = False
-                data_buffer[pipe_nbr].append(bytes(payload[: payload_size - 2]))
-                print("Received a payload in pipe {} \nsize {} bytes \ndata {}\n".format(pipe_nbr, payload_size, np.ravel(data_buffer[pipe_nbr].pop())))
+                else:
+                    
+                    fragmented[pipe_nbr] = False
+                    data_buffer[pipe_nbr].append(bytes(payload[: payload_size - 2]))
+                    print("Received a payload in pipe {} \nsize {} bytes \ndata {}\n".format(pipe_nbr, payload_size, np.ravel(data_buffer[pipe_nbr].pop())))
             else:
                 print("Fragmentation order corrupt (id: {}), discarding packet..".format(id))
 
