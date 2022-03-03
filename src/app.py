@@ -7,6 +7,7 @@ import sys
 import argparse
 import time
 import struct
+import random
 import typing
 import numpy as np
 from RPi import GPIO
@@ -26,7 +27,7 @@ IP_TABLE = np.array([1 for _ in range(6)])
 LOCAL_ADDRESS = []
 
 #Data buffer for all pipes in rx (128 bytes)
-DATA_BUFFER = np.array([[] for _ in range(len(IP_TABLE))])
+data_buffer = [[] for _ in range(len(IP_TABLE))]
 
 #Config value arrays
 
@@ -179,22 +180,25 @@ def fragment(data):
 
         #Padding with zeroes followed by padding size (max chunk_size  - 1 B)
         padding = [0 for _ in range(chunk_size - (data_length % chunk_size))]
-        print(bytes(padding))
+        #print(bytes(padding))
         #Add length of padding in the last byte
-        print("Number of padding bytes = {}".format(len(padding)))
+        #print("Number of padding bytes = {}".format(len(padding)))
         padding[len(padding) - 1] += len(padding)
         data += bytes(padding)
-        print("Data = {}".format(bytearray(data)))
+        #print("Data = {}".format(bytearray(data)))
 
     #Insert in numpy array and reshape into nbr_chunks clusters of size chunk_size
     fragmented = np.array(bytearray(data)).reshape(nbr_chunks, chunk_size)
 
-    return fragmented
+    return fragmented.tolist()
 
 
-def transmit(tx_radio, address, data):
+def transmit(tx_radio, address):
+
+    time.sleep(5) #To power up node in time
 
     status = []
+    data = bytes([random.randint(0, 255) for _ in range(100)])
 
     #Fragment the data into chunks (n chunks * chunk size (31) matrix, each line is a chunk)
     chunks = fragment(data)
@@ -202,13 +206,14 @@ def transmit(tx_radio, address, data):
     tx_radio.stopListening()
 
     start = time.monotonic()
-    if(chunks.size != 0):
+    if(len(chunks) != 0):
 
         #If it has only 1 row, then id = 0x0000
-        if(chunks.shape[0] == 1):
+        if(len(chunks) == 1):
             id = 0
-            np.append(chunks, struct.pack("<H", id))
-            buffer = bytes(chunk.data)
+            print("id = {}, and as struct = {}".format(id, struct.pack("<H", id)))
+            chunk.append(struct.pack("<H", id))
+            buffer = bytes(chunk)
             print("Sending: {} as struct: {}".format(chunk, buffer))
 
             result = tx_radio.write(buffer, False)
@@ -221,14 +226,19 @@ def transmit(tx_radio, address, data):
         #Otherwise send all available chunks and append id > 0
         else:
             id = 1
-            nbr_chunks = chunks.shape[0]
+            nbr_chunks = len(chunks)
             #Data available to send
-            for chunk in chunks:
+            for index, chunk in enumerate(chunks):
 
-                #Again unclear if this will be identified as bytes (<H little endian 16bit unsigned int hopefully)
-                np.append(chunk, struct.pack("<H", id))
+                print("id = {}, and as struct = {}".format(id, struct.pack(">H", id)))
+
+                #Last fragment part will have id 0
+                if(index == len(chunks) - 1):
+                    id = 0
+                buffer = bytes(chunk)
+                buffer += struct.pack(">H", id)
+
                 #Send all chunks one at a time
-                buffer = bytes(chunk.data)
                 print("Sending chunk {} of {} with data: {} as struct {}, ".format(id, nbr_chunks, chunk, buffer))
 
                 result = tx_radio.write(buffer, False)
@@ -239,14 +249,18 @@ def transmit(tx_radio, address, data):
                     print("send() successful")
                     status.append(True)
                 id += 1
+                time.sleep(1)
     total_time = time.monotonic() - start
 
-    print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), size*8*len(status)/total_time))
+    print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), nbr_chunks*len(chunks[0])*8*len(status)/total_time))
 
+#TODO fragment_buffer not appending for some reason..............................................................................................................
 def receive(rx_radio, timeout):
 
     print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(rx_radio.getPALevel(), SPI_SPEED))
 
+    fragmented = False
+    fragment_buffer = []
     # Start listening
     rx_radio.startListening()
     start = time.time()
@@ -255,18 +269,50 @@ def receive(rx_radio, timeout):
 
         #Checks if there are bytes available for read
         payload_available, pipe_nbr = rx_radio.available_pipe()
+        payload = []
 
         if(payload_available):
 
             print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
             # If has payload, read radio packet size
             payload_size = rx_radio.getDynamicPayloadSize()
-            payload = struct.unpack("<i", rx_radio.read(payload_size))
-            print("Payload size = {} \nPayload = {}".format(payload_size, np.ravel(np.array(payload))))
+            payload = rx_radio.read(payload_size)
 
-            # Insert payload into data buffer
-            DATA_BUFFER[pipe_nbr] = np.array([payload])
-            print("Received a payload in pipe {} of size {} bytes and data {}\n".format(pipe_nbr, payload_size, np.ravel(DATA_BUFFER[pipe_nbr])))
+            id = struct.unpack(">H", payload[payload_size - 2: payload_size])[0]
+            print("id = {}".format(id))
+            
+            if(id == 1):
+
+                #First fragment
+                fragmented = True
+                print(bytes(payload[: payload_size - 2]))
+                fragment_buffer.append(bytes(payload[: payload_size - 2]))
+                print("Received first fragment (id: {}) \ndata = {}\n".format(id, fragment_buffer.pop()))
+
+            elif(id > 0 and fragmented):
+
+                #Fragmented data
+                print(bytes(payload[: payload_size - 2]))
+                fragment_buffer.append(str(bytes(payload[: payload_size - 2])))
+                print("Received fragment nbr: {} \ndata = {}\n".format(id, fragment_buffer.pop()))
+
+            elif(id == 0):
+
+                print("fragment_buffer = {}".format(fragment_buffer))
+                # Not fragmented, insert payload into data buffer and "push" fragment_buffer to data_buffer + clear fragment buff
+                print("fragmented = {}, len buff = {}".format(fragmented, len(fragment_buffer)))
+
+                if(fragmented and len(fragment_buffer) != 0):
+
+                    data_buffer[pipe_nbr].append([x for x in fragment_buffer])
+                    fragment_buffer.clear()
+                    print("All fragments received!")
+
+                fragmented = False
+                data_buffer[pipe_nbr].append(bytes(payload[: payload_size - 2]))
+                print("Received a payload in pipe {} \nsize {} bytes \ndata {}\n".format(pipe_nbr, payload_size, np.ravel(data_buffer[pipe_nbr].pop())))
+            else:
+                print("Fragmentation order corrupt (id: {}), discarding packet..".format(id))
 
             # Flush rx buffer
             #rx_radio.flush_rx()
