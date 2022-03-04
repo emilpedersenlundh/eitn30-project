@@ -8,9 +8,6 @@ import socket
 import scapy.all as scapy
 from tuntap import TunTap
 
-INTERFACE = ''
-PORT=5000
-
 class Server:
 
     def __init__(self) -> None:
@@ -22,16 +19,13 @@ class Server:
         self.s.bind((interface, port))
         self.s.listen(1)
 
-#TODO: Implement send and receive on socket
-
-iface = 'LongGe'
-# Create and configure a TUN interface
-tun = TunTap(nic_type="Tun", nic_name="tun0")
-tun.config(ip="192.168.1.10", mask="255.255.255.0",
-teway="192.168.2.2")
-# Read from TUN interface
-#buf = tun.read(size)
-# Write to TUN interface
-#tun.write(buf)
-# Close and destroy interface
-tun.close()
+    def __create_tun(self, ip_address):
+        # Create and configure a TUN interface
+        tun = TunTap(nic_type="Tun", nic_name="longge")
+        tun.config(ip=ip_address, mask="255.255.255.0", gateway="10.10.10.1")
+        # Read from TUN interface
+        #buf = tun.read(size)
+        # Write to TUN interface
+        #tun.write(buf)
+        # Close and destroy interface
+        tun.close()
