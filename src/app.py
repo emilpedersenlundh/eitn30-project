@@ -201,8 +201,11 @@ def transmit(tx_radio, address):
     status = []
     data = bytes([random.randint(0, 255) for _ in range(100)])
 
-    #Fragment the data into chunks (n chunks * chunk size (31) matrix, each line is a chunk)
-    chunks = fragment(data)
+    #Fragment the data into chunks (n chunks * chunk size (30) matrix, each line is a chunk)
+    if(len(data) > 30):
+        chunks = fragment(data)
+    else:
+        chunks = list(data)
 
     tx_radio.stopListening()
 
@@ -267,11 +270,14 @@ def transmit(tx_radio, address):
 
 def receive(rx_radio, timeout):
 
+    global data_buffer
+
     print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(rx_radio.getPALevel(), SPI_SPEED))
 
     nbr_pipes = len(IP_TABLE)
     fragmented = [False for _ in range(nbr_pipes)]
     fragment_buffer = [[] for _ in range(nbr_pipes)]
+    id_offset = 2
 
     rx_radio.startListening()
     start = time.time()
@@ -290,22 +296,22 @@ def receive(rx_radio, timeout):
             payload_size = rx_radio.getDynamicPayloadSize()
             payload = rx_radio.read(payload_size)
 
-            id = struct.unpack(">H", payload[payload_size - 2: payload_size])[0]
+            id = struct.unpack(">H", payload[payload_size - id_offset: payload_size])[0]
             print("id = {}".format(id))
             
             if(id == 1):
 
                 #First fragment
                 fragmented[pipe_nbr] = True
-                print(bytes(payload[: payload_size - 2]))
-                fragment_buffer[pipe_nbr].append(bytes(payload[: payload_size - 2]))
+                print(bytes(payload[: payload_size - id_offset]))
+                fragment_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset]))
                 print("Received first fragment (id: {}) \ndata = {}\n".format(id, fragment_buffer.pop()))
 
             elif(id > 0 and fragmented[pipe_nbr]):
 
                 #Fragmented data
-                print(bytes(payload[: payload_size - 2]))
-                fragment_buffer[pipe_nbr].append(str(bytes(payload[: payload_size - 2])))
+                print(bytes(payload[: payload_size - id_offset]))
+                fragment_buffer[pipe_nbr].append(str(bytes(payload[: payload_size - id_offset])))
                 print("Received fragment nbr: {} \ndata = {}\n".format(id, fragment_buffer[pipe_nbr].pop()))
 
             elif(id == 0):
@@ -315,14 +321,21 @@ def receive(rx_radio, timeout):
                 print("fragmented = {}, len buff = {}".format(fragmented[pipe_nbr], len(fragment_buffer[pipe_nbr])))
 
                 if(fragmented[pipe_nbr] and len(fragment_buffer[pipe_nbr]) != 0):
-
+                    
+                    #Last fragmented packet, remove id and padding
+                    padding_size = payload[payload_size - id_offset - 1]
+                    fragment_buffer.append(payload[:payload_size - padding_size - id_offset - 2]) #-4 to remove id bytes and padding size byte
+                    
+                    #Add all fragments to one element in the global buffer
                     data_buffer[pipe_nbr].append([x for x in fragment_buffer])
                     fragment_buffer[pipe_nbr].clear()
                     print("All fragments received!")
+                    fragmented[pipe_nbr] = False
                 else:
                     
+                    #Normal packet not fragmented
                     fragmented[pipe_nbr] = False
-                    data_buffer[pipe_nbr].append(bytes(payload[: payload_size - 2]))
+                    data_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset - 1]))
                     print("Received a payload in pipe {} \nsize {} bytes \ndata {}\n".format(pipe_nbr, payload_size, np.ravel(data_buffer[pipe_nbr].pop())))
             else:
                 print("Fragmentation order corrupt (id: {}), discarding packet..".format(id))
