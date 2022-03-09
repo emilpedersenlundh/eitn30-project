@@ -2,11 +2,13 @@
 
 import array
 from ctypes import c_byte, c_uint, c_uint16, c_uint32, c_uint8
+from ipaddress import ip_address
 import string
 import sys
 import argparse
 import time
 import struct
+import random
 import typing
 import random
 import numpy as np
@@ -21,13 +23,15 @@ A_WIDTH: c_uint8 = 5 #2-5 bytes
 RT_DELAY: c_uint8 = 0 #0-15 (250-4000 microseconds)
 RT_LIMIT: c_uint8 = 15 #0-15 (0 = Disabled)
 
+role = ""
+
 #6 slots for addresses
-IP_TABLE = np.array([1 for _ in range(6)])
+ip_table = [-1 for _ in range(6)]
 
 LOCAL_ADDRESS = []
 
 #Data buffer for all pipes in rx (128 bytes)
-data_buffer = [[] for _ in range(len(IP_TABLE))]
+data_buffer = [[] for _ in range(len(ip_table))]
 
 #Config value arrays
 
@@ -39,6 +43,7 @@ SPI0 = {
     'ce':17,#digitalio.DigitalInOut(board.D17),
     'csn':8#digitalio.DigitalInOut(board.D8),
     }
+
 SPI1 = {
     'SPI':10,
     'MOSI':20,#dio.DigitalInOut(board.D10),
@@ -47,6 +52,7 @@ SPI1 = {
     'ce':27,#digitalio.DigitalInOut(board.D27),
     'csn':18#digitalio.DigitalInOut(board.D18),
     }
+
 # TODO fix addresses to big endian
 # PIPE_ADDRESSES = [
 #     b"\xE7\xD3\xF0\x35\x77",
@@ -202,16 +208,20 @@ def fragment(data):
 
     return fragmented.tolist()
 
-
+# @TODO How do we handle addresses etc in L2? do we need to?
 def transmit(tx_radio, address):
 
     time.sleep(5) #To power up node in time
 
     status = []
     data = bytes([random.randint(0, 255) for _ in range(100)])
+    print("Original data = {}".format(data))
 
-    #Fragment the data into chunks (n chunks * chunk size (31) matrix, each line is a chunk)
-    chunks = fragment(data)
+    #Fragment the data into chunks (n chunks * chunk size (30) matrix, each line is a chunk)
+    if(len(data) > 30):
+        chunks = fragment(data)
+    else:
+        chunks = list(data)
 
     tx_radio.stopListening()
 
@@ -220,21 +230,26 @@ def transmit(tx_radio, address):
 
         #If it has only 1 row, then id = 0x0000
         if(len(chunks) == 1):
+
             id = 0
             print("id = {}, and as struct = {}".format(id, struct.pack("<H", id)))
+
             chunk.append(struct.pack("<H", id))
             buffer = bytes(chunk)
-            print("Sending: {} as struct: {}".format(chunk, buffer))
 
+            print("Sending: {} as struct: {}".format(chunk, buffer))
             result = tx_radio.write(buffer, False)
+
             if not result:
                 print("send() failed or timed out")
                 status.append(False)
             else:
                 print("send() successful")
                 status.append(True)
+
         #Otherwise send all available chunks and append id > 0
         else:
+
             id = 1
             nbr_chunks = len(chunks)
             #Data available to send
@@ -244,36 +259,48 @@ def transmit(tx_radio, address):
 
                 #Last fragment part will have id 0
                 if(index == len(chunks) - 1):
-                    id = 0
+                    id = 0 #pow(2, 16) - 1 #0xFFFF
+
                 buffer = bytes(chunk)
                 buffer += struct.pack(">H", id)
 
                 #Send all chunks one at a time
                 print("Sending chunk {} of {} with data: {} as struct {}, ".format(id, nbr_chunks, chunk, buffer))
-
                 result = tx_radio.write(buffer, False)
+
                 if not result:
                     print("send() failed or timed out")
                     status.append(False)
                 else:
                     print("send() successful")
                     status.append(True)
+
                 id += 1
+                #Reduce speed for debug
                 time.sleep(1)
+
     total_time = time.monotonic() - start
 
     print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), nbr_chunks*len(chunks[0])*8*len(status)/total_time))
 
-#TODO fragment_buffer not appending for some reason..............................................................................................................
 def receive(rx_radio, timeout):
+
+    global data_buffer
+    global ip_table
+    global role
+
+    print("DATABUFFER BEFORE INSERTION {}".format(data_buffer))
 
     print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(rx_radio.getPALevel(), SPI_SPEED))
 
-    fragmented = False
-    fragment_buffer = []
-    # Start listening
+    nbr_pipes = len(ip_table)
+    fragmented = [False for _ in range(nbr_pipes)]
+    fragment_buffer = [[] for _ in range(nbr_pipes)]
+    id_offset = 2
+
     rx_radio.startListening()
     start = time.time()
+    
     # Timeout condition
     while(time.time() - start < timeout):
 
@@ -283,46 +310,68 @@ def receive(rx_radio, timeout):
 
         if(payload_available):
 
-            print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
-            # If has payload, read radio packet size
-            payload_size = rx_radio.getDynamicPayloadSize()
-            payload = rx_radio.read(payload_size)
+            if(pipe_nbr == 0):
+                
+                if(role == 'BASE'):
 
-            id = struct.unpack(">H", payload[payload_size - 2: payload_size])[0]
-            print("id = {}".format(id))
-            
-            if(id == 1):
+                    #Find non occupied pipe
+                    first_free_pipe = ip_table.index(-1)
 
-                #First fragment
-                fragmented = True
-                print(bytes(payload[: payload_size - 2]))
-                fragment_buffer.append(bytes(payload[: payload_size - 2]))
-                print("Received first fragment (id: {}) \ndata = {}\n".format(id, fragment_buffer.pop()))
+                    #Send back physical address of pipe
+                    #Send back ip address
 
-            elif(id > 0 and fragmented):
-
-                #Fragmented data
-                print(bytes(payload[: payload_size - 2]))
-                fragment_buffer.append(str(bytes(payload[: payload_size - 2])))
-                print("Received fragment nbr: {} \ndata = {}\n".format(id, fragment_buffer.pop()))
-
-            elif(id == 0):
-
-                print("fragment_buffer = {}".format(fragment_buffer))
-                # Not fragmented, insert payload into data buffer and "push" fragment_buffer to data_buffer + clear fragment buff
-                print("fragmented = {}, len buff = {}".format(fragmented, len(fragment_buffer)))
-
-                if(fragmented and len(fragment_buffer) != 0):
-
-                    data_buffer[pipe_nbr].append([x for x in fragment_buffer])
-                    fragment_buffer.clear()
-                    print("All fragments received!")
-
-                fragmented = False
-                data_buffer[pipe_nbr].append(bytes(payload[: payload_size - 2]))
-                print("Received a payload in pipe {} \nsize {} bytes \ndata {}\n".format(pipe_nbr, payload_size, np.ravel(data_buffer[pipe_nbr].pop())))
             else:
-                print("Fragmentation order corrupt (id: {}), discarding packet..".format(id))
+
+                print("Payload available = {} \nPipe number = {}".format(payload_available, pipe_nbr))
+                # If has payload, read radio packet size
+                payload_size = rx_radio.getDynamicPayloadSize()
+                payload = rx_radio.read(payload_size)
+
+                id = struct.unpack(">H", payload[payload_size - id_offset: payload_size])[0]
+                print("id = {}".format(id))
+                
+                if(id == 1):
+
+                    #First fragment
+                    fragmented[pipe_nbr] = True
+                    print(bytes(payload[: payload_size - id_offset]))
+                    fragment_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset]))
+                    print("Received first fragment (id: {}) \ndata = {}\n".format(id, fragment_buffer))
+
+                elif(id > 0 and fragmented[pipe_nbr]):
+
+                    #Fragmented data
+                    print(bytes(payload[: payload_size - id_offset]))
+                    fragment_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset]))
+                    print("Received fragment nbr: {} \ndata = {}\n".format(id, fragment_buffer[pipe_nbr]))
+
+                elif(id == 0):
+
+                    print("fragment_buffer = {}".format(fragment_buffer[pipe_nbr]))
+                    # Not fragmented, insert payload into data buffer and "push" fragment_buffer to data_buffer + clear fragment buff
+                    print("fragmented = {}, len buff = {}".format(fragmented[pipe_nbr], len(fragment_buffer[pipe_nbr])))
+
+                    if(fragmented[pipe_nbr] and len(fragment_buffer[pipe_nbr]) != 0):
+                        
+                        #Last fragmented packet, remove id and padding
+                        padding_size = payload[payload_size - id_offset - 1]
+                        fragment_buffer.append(payload[:payload_size - padding_size - id_offset - 2]) #-4 to remove id bytes and padding size byte
+                        
+                        #Add all fragments to one element in the global buffer
+                        print("typ = {}, actual = {}".format(type(fragment_buffer[pipe_nbr][0]), fragment_buffer[pipe_nbr] ))
+                        data_buffer[pipe_nbr].append(b''.join(fragment_buffer[pipe_nbr]))
+                        fragment_buffer[pipe_nbr].clear()
+                        print("All fragments received!")
+                        print("DATABUFFER = {}".format(data_buffer))
+                        fragmented[pipe_nbr] = False
+                    else:
+                        
+                        #Normal packet not fragmented
+                        fragmented[pipe_nbr] = False
+                        data_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset - 1]))
+                        print("Received a payload in pipe {} \nsize {} bytes \ndata {}\n".format(pipe_nbr, payload_size, np.ravel(data_buffer[pipe_nbr])))
+                else:
+                    print("Fragmentation order corrupt (id: {}), discarding packet..".format(id))
 
             # Flush rx buffer
             #rx_radio.flush_rx()
@@ -444,7 +493,7 @@ if __name__ == "__main__":
     setup(mode_select)
     dest_addr = 1
     duration = 5000
-    role = mode(mode_select)
+    global role = mode(mode_select)
     count = 3
 try:
     while count:

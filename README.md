@@ -13,3 +13,5 @@ NRF Module handles communication for L1-2, the control plane for L1-2 however ha
 
 ## Current situation:
 Radio communication has been achieved. Current goals are to restructure the code base to an OOP format and create unit tests for code that is not directly linked to the hardware (e.g. data parsing, data handling, web interface).
+
+As for the control plane. The base station will implement a DHCP server with a local subnet, and with its LongGe interface masquerading through the Eth0 interface. The nodes will implement a DHCP client which communicates with the base station DHCP server. The LongGe interface on the nodes inherit whatever local IP the DHCP server provides in each lease.
