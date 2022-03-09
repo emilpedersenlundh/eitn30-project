@@ -12,4 +12,6 @@ The second part, which utilizes the above mentioned connection, is a yet to be d
 NRF Module handles communication for L1-2, the control plane for L1-2 however has to be implemented by hand (e.g. controlled/random access, queueing, collision detection). Enhanced Shockburst can be used to handle RMA and collision detection. As for the actual data handling, only L3 and above has to be implemented. Base functionality includes IP and ICMP(ping).
 
 ## Current situation:
-Typechecks have been amended. Native RPi SPI driver has been swapped for SPIDEV. Applying dtoverlays for SPI buses 0 & 1 in /boot/config.txt seems to have set their corresponding GPIO pins to the correct mode (manual modes are still applied though). However manually setting SPI bus 0 to just one channel seems to muck with the module. Apply 2 CS on bus 0 (or let it do so automatically). Setting the correct parameters for the radio module is now a priority as that seems most likely to garner success.
+Radio communication has been achieved. Current goals are to restructure the code base to an OOP format and create unit tests for code that is not directly linked to the hardware (e.g. data parsing, data handling, web interface).
+
+As for the control plane. The base station will implement a DHCP server with a local subnet, and with its LongGe interface masquerading through the Eth0 interface. The nodes will implement a DHCP client which communicates with the base station DHCP server. The LongGe interface on the nodes inherit whatever local IP the DHCP server provides in each lease.
