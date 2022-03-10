@@ -337,9 +337,13 @@ def receive(rx_radio, timeout):
                     rx_radio.openReadingPipe(first_free_pipe, PIPE_ADDRESSES[first_free_pipe])
 
                     #Generate new random ip address for the node
-                    node_ip = bytes([random.randint(0, 255) for _ in range(32)])
-                    while node_ip not in [ip_table[x][1] for x in range(len(ip_table))]: 
-                        node_ip = bytes([random.randint(0, 255) for _ in range(32)])
+                    node_ip = b"\x0A\x0A\x0A"
+                    temp_ip = node_ip
+                    temp_ip += bytes(random.randint(2, 254))
+                    while temp_ip not in [ip_table[x][1] for x in range(len(ip_table))]: 
+                        temp_ip = node_ip
+                        temp_ip += bytes(random.randint(2, 254))
+                    node_ip = temp_ip
 
                     #Add node (physical address, ip address) in ip_table
                     ip_table[first_free_pipe] = (PIPE_ADDRESSES[first_free_pipe], node_ip)
@@ -561,7 +565,7 @@ if __name__ == "__main__":
     count = 3
 
     dest_addr = PIPE_ADDRESSES[0]
-    data = bytes([random.randint(0, 255) for _ in range(100)])
+    #data = bytes([random.randint(0, 255) for _ in range(100)])
 
     try:
         while count:
