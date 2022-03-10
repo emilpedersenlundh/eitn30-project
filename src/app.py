@@ -26,7 +26,7 @@ RT_LIMIT: c_uint8 = 15 #0-15 (0 = Disabled)
 role = ""
 
 #6 slots for addresses
-ip_table = [-1 for _ in range(6)]
+ip_table = [(-1, -1) for _ in range(6)]
 
 LOCAL_ADDRESS = []
 
@@ -144,13 +144,8 @@ def setup(mode_select: str="NODE"):
     rx_radio.setDataRate(RF24_2MBPS)
     tx_radio.setDataRate(RF24_2MBPS)
 
-    # Open pipes
-    for pipe, address in enumerate(PIPE_ADDRESSES):
-        if(mode_select == "NODE"):
-            rx_radio.openReadingPipe(pipe, address)
-            print("Opened reading pipe: {} with address: {}".format(pipe, address))
-    tx_radio.openWritingPipe(PIPE_ADDRESSES[0])
-    print("Opened writing pipe with address: {}".format(address))
+    # Open pipe 0
+    rx_radio.openReadingPipe(0, PIPE_ADDRESSES[0])
 
     # Flush buffers
     rx_radio.flush_rx()
@@ -209,12 +204,14 @@ def fragment(data):
     return fragmented.tolist()
 
 # @TODO How do we handle addresses etc in L2? do we need to?
-def transmit(tx_radio, address):
+def transmit(tx_radio, address, data):
+
+    tx_radio.openWritingPipe(address)
+    print("Opened writing pipe with address: {}".format(address))
 
     time.sleep(5) #To power up node in time
 
     status = []
-    data = bytes([random.randint(0, 255) for _ in range(100)])
     print("Original data = {}".format(data))
 
     #Fragment the data into chunks (n chunks * chunk size (30) matrix, each line is a chunk)
@@ -283,13 +280,33 @@ def transmit(tx_radio, address):
 
     print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), nbr_chunks*len(chunks[0])*8*len(status)/total_time))
 
+#Special function for transmitting ip:s (all 32 bytes are ip) no fragmentation needed
+def transmit_ip(tx_radio, address, ip):
+
+    status = []
+    start = time.monotonic()
+
+    buffer = bytes(ip)
+
+    print("Sending ip: {}".format(buffer))
+    result = tx_radio.write(buffer, False)
+
+    if not result:
+        print("send() failed or timed out")
+        status.append(False)
+    else:
+        print("send() successful")
+        status.append(True)
+
+    total_time = time.monotonic() - start
+
+    print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), 32*8*len(status)/total_time))
+
 def receive(rx_radio, timeout):
 
     global data_buffer
     global ip_table
     global role
-
-    print("DATABUFFER BEFORE INSERTION {}".format(data_buffer))
 
     print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(rx_radio.getPALevel(), SPI_SPEED))
 
@@ -310,15 +327,63 @@ def receive(rx_radio, timeout):
 
         if(payload_available):
 
+            #Handshake
             if(pipe_nbr == 0):
                 
                 if(role == 'BASE'):
-
+                    #Handshake for base
                     #Find non occupied pipe
                     first_free_pipe = ip_table.index(-1)
+                    rx_radio.openReadingPipe(first_free_pipe, PIPE_ADDRESSES[first_free_pipe])
+
+                    #Generate new random ip address for the node
+                    node_ip = bytes([random.randint(0, 255) for _ in range(32)])
+                    while node_ip not in [ip_table[x][1] for x in range(len(ip_table))]: 
+                        node_ip = bytes([random.randint(0, 255) for _ in range(32)])
+
+                    #Add node (physical address, ip address) in ip_table
+                    ip_table[first_free_pipe] = (PIPE_ADDRESSES[first_free_pipe], node_ip)
+
+                    payload_size = rx_radio.getDynamicPayloadSize()
+                    payload = rx_radio.read(payload_size)
+
+                    #Extract physical address of node (pipe 0) (used for transmit of new physical address)
+                    node_address = payload[: payload_size - id_offset]
 
                     #Send back physical address of pipe
-                    #Send back ip address
+                    transmit(tx_radio, node_address, ip_table[first_free_pipe])
+
+                    #Send back ip to node
+                    transmit_ip(tx_radio, node_address, node_ip)
+                    
+                else:
+                    #Handshake for node
+                    #Pipe used for talking to base station
+                    node_pipe = 1
+
+                    #Unpack physical address
+                    payload_size = rx_radio.getDynamicPayloadSize()
+                    payload = rx_radio.read(payload_size)
+
+                    physical_address = payload[: payload_size - id_offset]
+
+                    #Wait for receiving ip address
+                    payload_available = False
+                    while not payload_available:
+                        payload_available, pipe_nbr = rx_radio.available_pipe()
+
+                    #Extract ip
+                    payload_size = rx_radio.getDynamicPayloadSize()
+                    node_ip = rx_radio.read(payload_size)
+
+                    #@TODO set ip in tun/tap or something
+
+                    #Open reading pipe with correct address
+                    rx_radio.openReadingPipe(node_pipe, physical_address)
+
+                    #Change reading pipe 0 address to 0xFFFFFFFFFF which won't be used
+                    rx_radio.openReadingPipe(0, b"\xff\xff\xff\xff\xff")
+
 
             else:
 
@@ -491,26 +556,31 @@ if __name__ == "__main__":
     mode_select = input("Select mode (BASE or NODE): ").upper()
 
     setup(mode_select)
-    dest_addr = 1
     duration = 5000
-    global role = mode(mode_select)
+    role = mode(mode_select)
     count = 3
-try:
-    while count:
-        if(role == "BASE"):
-            start = time.time()
-            while(time.time() - start < duration):
-                transmit(tx_radio, dest_addr)
-        else:
-            start = time.time()
-            receive(rx_radio, duration)
-        count -= 1
 
-except KeyboardInterrupt:
-    print("\n----Keyboard interrupt----\n")
-    if (role == "NODE"):
-        print("RX Radio Details: \n")
-        rx_radio.printPrettyDetails()
-    if (role == "BASE"):
-        print("\nTX Radio Details:\n")
-        tx_radio.printPrettyDetails()
+    dest_addr = PIPE_ADDRESSES[0]
+    data = bytes([random.randint(0, 255) for _ in range(100)])
+
+    try:
+        while count:
+            if(role == "BASE"):
+                receive(rx_radio, duration)
+            else:
+                if count == 3:
+                    #First transmission for handshake
+                    #Send address of pipe 0
+                    data = PIPE_ADDRESSES[0]
+                    transmit(tx_radio, dest_addr, data)
+                receive(rx_radio, duration)
+            count -= 1
+
+    except KeyboardInterrupt:
+        print("\n----Keyboard interrupt----\n")
+        if (role == "NODE"):
+            print("RX Radio Details: \n")
+            rx_radio.printPrettyDetails()
+        if (role == "BASE"):
+            print("\nTX Radio Details:\n")
+            tx_radio.printPrettyDetails()
