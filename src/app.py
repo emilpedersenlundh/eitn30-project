@@ -216,6 +216,7 @@ def transmit(tx_radio, address, data):
 
     #Fragment the data into chunks (n chunks * chunk size (30) matrix, each line is a chunk)
     if(len(data) > 30):
+        print("Data too long fragment..")
         chunks = fragment(data)
     else:
         chunks = list(data)
@@ -332,9 +333,11 @@ def receive(rx_radio, timeout):
                 
                 if(role == 'BASE'):
                     #Handshake for base
+                    print("Starting base handshake..")
                     #Find non occupied pipe
                     first_free_pipe = ip_table.index(-1)
                     rx_radio.openReadingPipe(first_free_pipe, PIPE_ADDRESSES[first_free_pipe])
+                    print("node given pipe {}".format(first_free_pipe))
 
                     #Generate new random ip address for the node
                     node_ip = b"\x0A\x0A\x0A"
@@ -345,6 +348,8 @@ def receive(rx_radio, timeout):
                         temp_ip += bytes(random.randint(2, 254))
                     node_ip = temp_ip
 
+                    print("node ip = {}".format(node_ip))
+
                     #Add node (physical address, ip address) in ip_table
                     ip_table[first_free_pipe] = (PIPE_ADDRESSES[first_free_pipe], node_ip)
 
@@ -353,6 +358,7 @@ def receive(rx_radio, timeout):
 
                     #Extract physical address of node (pipe 0) (used for transmit of new physical address)
                     node_address = payload[: payload_size - id_offset]
+                    print("node physical address = {}".format(node_address))
 
                     #Send back physical address of pipe
                     transmit(tx_radio, node_address, ip_table[first_free_pipe])
@@ -362,6 +368,7 @@ def receive(rx_radio, timeout):
                     
                 else:
                     #Handshake for node
+                    print("Starting node handshake..")
                     #Pipe used for talking to base station
                     node_pipe = 1
 
@@ -370,6 +377,7 @@ def receive(rx_radio, timeout):
                     payload = rx_radio.read(payload_size)
 
                     physical_address = payload[: payload_size - id_offset]
+                    print("received physical address: {}".format(physical_address))
 
                     #Wait for receiving ip address
                     payload_available = False
@@ -379,6 +387,7 @@ def receive(rx_radio, timeout):
                     #Extract ip
                     payload_size = rx_radio.getDynamicPayloadSize()
                     node_ip = rx_radio.read(payload_size)
+                    print("Received ip address: {}".format(node_ip))
 
                     #@TODO set ip in tun/tap or something
 
@@ -576,6 +585,7 @@ if __name__ == "__main__":
                     #First transmission for handshake
                     #Send address of pipe 0
                     data = PIPE_ADDRESSES[0]
+                    print("physical address = {}".format(data))
                     transmit(tx_radio, dest_addr, data)
                 receive(rx_radio, duration)
             count -= 1
