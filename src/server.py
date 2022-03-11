@@ -1,19 +1,14 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
-from ast import Not
 import os
 import fcntl
 import struct
-import typing
-from multiprocessing import Process, Queue
-import scapy.all as scapy
-from tuntap import TunTap
 
 class Server:
 
-    def __init__(self, ip):
-        # Local variables
-        self.tun = Interface(nic_type='tun', nic_name='longge', ip_address=ip, mask='255.255.255.0', gateway='10.10.10.1')
+    def __init__(self, iface):
+
+        self.tun = Interface(iface)
 
     def read(self):
         self.tun.read()
@@ -27,20 +22,31 @@ class Server:
             except Exception as e:
                 print(e)
 
+    def set_ip():
+        pass
+
 class Interface:
 
-    def __init__(self, nic_type, nic_name, ip_address, mask, gateway):
-        self.tun = TunTap(nic_type, nic_name)
-        self.tun.ip = ip_address
-        self.tun.mask = mask
-        self.tun.gateway = gateway
-        self.tun.mtu = 1500
+    def __init__(self, iface):
+        # Tun Attributes
+        TUNSETIFF = 0x400454ca
+        TUNSETOWNER = TUNSETIFF + 2
+        IFF_TUN = 0x0001
+        IFF_NO_PI = 0x1000
+        self.mtu = 2048
 
-    def __del__(self):
-        self.tun.close()
+        # Opens already existing TUN interface
+        self.tun = open('/dev/net/tun', 'r+b', 0)
+        ifr= struct.pack('16sH', bytes(iface,'utf-8'), IFF_TUN | IFF_NO_PI)
+        fcntl.ioctl(self.tun, TUNSETIFF, ifr)
+        fcntl.ioctl(self.tun, TUNSETOWNER, 1000)
 
     def read(self):
-        self.tun.read(self.tun.mtu)
+        packet = os.read(self.tun.fileno(), self.mtu)
+        return packet
 
     def write(self, buffer):
-        self.tun.write(buffer)
+        written = os.write(self.tun.fileno(), buffer)
+        if written != 0:
+            return True
+        return False
