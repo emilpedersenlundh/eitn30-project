@@ -2,8 +2,6 @@
 
 import array
 from ctypes import c_byte, c_uint, c_uint16, c_uint32, c_uint8
-from ipaddress import ip_address
-import string
 import sys
 import argparse
 import time
@@ -281,7 +279,7 @@ def receive(rx_radio, timeout):
 
     rx_radio.startListening()
     start = time.time()
-    
+
     # Timeout condition
     while(time.time() - start < timeout):
 
@@ -298,7 +296,7 @@ def receive(rx_radio, timeout):
 
             id = struct.unpack(">H", payload[payload_size - id_offset: payload_size])[0]
             print("id = {}".format(id))
-            
+
             if(id == 1):
 
                 #First fragment
@@ -321,18 +319,18 @@ def receive(rx_radio, timeout):
                 print("fragmented = {}, len buff = {}".format(fragmented[pipe_nbr], len(fragment_buffer[pipe_nbr])))
 
                 if(fragmented[pipe_nbr] and len(fragment_buffer[pipe_nbr]) != 0):
-                    
+
                     #Last fragmented packet, remove id and padding
                     padding_size = payload[payload_size - id_offset - 1]
                     fragment_buffer.append(payload[:payload_size - padding_size - id_offset - 2]) #-4 to remove id bytes and padding size byte
-                    
+
                     #Add all fragments to one element in the global buffer
                     data_buffer[pipe_nbr].append([x for x in fragment_buffer])
                     fragment_buffer[pipe_nbr].clear()
                     print("All fragments received!")
                     fragmented[pipe_nbr] = False
                 else:
-                    
+
                     #Normal packet not fragmented
                     fragmented[pipe_nbr] = False
                     data_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset - 1]))
@@ -476,7 +474,7 @@ try:
 except KeyboardInterrupt:
     print("\n----Keyboard interrupt----\n")
     if (role == "NODE"):
-        print("RX Radio Details: \n")
+        print("\nRX Radio Details:\n")
         rx_radio.printPrettyDetails()
     if (role == "BASE"):
         print("\nTX Radio Details:\n")
