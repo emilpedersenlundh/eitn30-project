@@ -2,7 +2,7 @@
 
 import pytest
 
-from ...src import server
+from src import server
 
 def test_init(self):
     s = server('10.10.10.1')
