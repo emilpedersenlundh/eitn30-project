@@ -9,7 +9,6 @@ import struct
 import random
 import typing
 import numpy as np
-from RPi import GPIO
 
 from RF24 import RF24
 from RF24 import RF24_PA_LOW, RF24_PA_MAX, RF24_2MBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
@@ -348,7 +347,7 @@ def receive(rx_radio, timeout):
     print("Timeout")
     rx_radio.stopListening()
 
-def construct_packet(dest_address: string, data: list, broadcast: bool = False):
+def construct_packet(dest_address: str, data: list, broadcast: bool = False):
 
     # Invalid addresses (unless broadcast is set)
     if(not broadcast):
