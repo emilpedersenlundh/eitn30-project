@@ -34,7 +34,7 @@ class Server:
         Sets IP of the Tun interface. If successful returns true, else false.
         """
         self.ip = ip
-        self.tun.interface_default_settings(ip)
+        self.tun.set_interface(ip)
         #if str(subprocess.check_call(check, shell=True)) != ip:
         #    return False
         #return True
@@ -57,7 +57,7 @@ class Interface:
         fcntl.ioctl(self.tun, TUNSETOWNER, 1000)
 
         # Sets default values for TUN interface
-        self.interface_default_settings('10.10.10.1')
+        self.set_interface('10.10.10.1')
 
     def read(self):
         packet = os.read(self.tun.fileno(), self.mtu)
@@ -69,7 +69,10 @@ class Interface:
             return True
         return False
 
-    def interface_default_settings(self, ip):
+    def set_interface(self, ip):
+        """
+        Applies settings to the TUN interface.
+        """
         cmd_netmask = 'netmask 255.255.255.0'
         cmd_broadcast = 'broadcast 10.10.10.255'
         cmd_mtu = "mtu {}".format(self.mtu)
