@@ -7,7 +7,8 @@ from server import Server as server
 
 
 if __name__ == "__main__":
-    s = server('longge')
+    mode = 'base'
+    s = server(mode)
     s.set_ip('10.10.10.1')
 
     while True:
