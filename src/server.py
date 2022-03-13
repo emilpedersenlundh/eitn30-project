@@ -51,7 +51,9 @@ class Interface:
         IFF_TUN = 0x0001
         IFF_NO_PI = 0x1000
         self.iface = iface
+        self.mode = mode
         self.mtu = 1500
+        self.ip = ip
 
         # Opens already existing TUN interface
         self.tun = open('/dev/net/tun', 'r+b', 0)
@@ -60,7 +62,7 @@ class Interface:
         fcntl.ioctl(self.tun, TUNSETOWNER, 1000)
 
         # Sets default values for TUN interface
-        self.set_interface(ip)
+        self.set_interface(self.ip)
 
     def read(self):
         packet = os.read(self.tun.fileno(), self.mtu)
@@ -79,8 +81,25 @@ class Interface:
         cmd_netmask = 'netmask 255.255.255.0'
         cmd_broadcast = 'broadcast 10.10.10.255'
         cmd_mtu = "mtu {}".format(self.mtu)
-        cmd = "ifconfig {} {} {} {} {}".format(self.iface, ip, cmd_netmask, cmd_broadcast, cmd_mtu)
+        cmd = "ifconfig {} {} {} {} {}".format(self.iface, self.ip, cmd_netmask, cmd_broadcast, cmd_mtu)
         subprocess.check_call(cmd, shell=True)
+        self.ip = ip
+
     def __routing_init(self):
         #TODO: Apply routing rules. Depend on parameter 'mode'.
-        pass
+        """
+        Applies routing rules depending on operating mode.
+        """
+        cmd_base = ' \ip route add 10.10.10.0/24 via {} dev {}'.format(self.ip, self.iface)
+        cmd_node = ''
+
+        if self.mode == 'BASE':
+            try:
+                subprocess.check_call(cmd_base, shell=True)
+            except subprocess.CalledProcessError as e:
+                print(e.output)
+        else:
+            try:
+                subprocess.check_call(cmd_node, shell=True)
+            except subprocess.CalledProcessError as e:
+                print(e.output)
