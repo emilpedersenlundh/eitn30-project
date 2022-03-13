@@ -3,15 +3,18 @@
 import os
 import fcntl
 import struct
+import random
 import subprocess
 
 class Server:
 
-    def __init__(self, iface):
+    def __init__(self, mode: str):
 
-        self.iface = iface
-        self.ip = 'default'
-        self.tun = Interface(iface)
+        self.iface = 'longge'
+        self.ip = '10.10.10.{}'.format(random.randint(2,254))
+        self.mode = mode.upper
+        self.tun = Interface(self.iface, self.ip, self.mode)
+        print("Started server {}:{} as {}".format(self.iface, self.ip, self.mode))
 
     def read(self):
         self.tun.read()
@@ -41,7 +44,7 @@ class Server:
 
 class Interface:
 
-    def __init__(self, iface):
+    def __init__(self, iface, ip, mode):
         # Tun Attributes
         TUNSETIFF = 0x400454ca
         TUNSETOWNER = TUNSETIFF + 2
@@ -57,7 +60,7 @@ class Interface:
         fcntl.ioctl(self.tun, TUNSETOWNER, 1000)
 
         # Sets default values for TUN interface
-        self.set_interface('10.10.10.1')
+        self.set_interface(ip)
 
     def read(self):
         packet = os.read(self.tun.fileno(), self.mtu)
@@ -78,5 +81,6 @@ class Interface:
         cmd_mtu = "mtu {}".format(self.mtu)
         cmd = "ifconfig {} {} {} {} {}".format(self.iface, ip, cmd_netmask, cmd_broadcast, cmd_mtu)
         subprocess.check_call(cmd, shell=True)
-    def __routing_init():
+    def __routing_init(self):
+        #TODO: Apply routing rules. Depend on parameter 'mode'.
         pass
