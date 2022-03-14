@@ -37,7 +37,8 @@ class Server:
         Sets IP of the Tun interface. If successful returns true, else false.
         """
         self.ip = ip
-        self.tun.set_interface(ip)
+        #self.tun.set_interface(ip)
+        self.tun.set_ip(ip)
         #if str(subprocess.check_call(check, shell=True)) != ip:
         #    return False
         #return True
@@ -64,6 +65,9 @@ class Interface:
         # Sets default values for TUN interface
         self.set_interface(self.ip)
 
+    def __delete__(self):
+        self.tun.close()
+
     def read(self):
         packet = os.read(self.tun.fileno(), self.mtu)
         return packet
@@ -78,12 +82,21 @@ class Interface:
         """
         Applies settings to the TUN interface.
         """
-        cmd_netmask = 'netmask 255.255.255.0'
-        cmd_broadcast = 'broadcast 10.10.10.255'
+        #cmd_netmask = 'netmask 255.255.255.0'
+        #cmd_broadcast = 'broadcast 10.10.10.255'
         cmd_mtu = "mtu {}".format(self.mtu)
-        cmd = "ifconfig {} {} {} {} {}".format(self.iface, self.ip, cmd_netmask, cmd_broadcast, cmd_mtu)
+        #cmd = "ifconfig {} {} {} {} {}".format(self.iface, self.ip, cmd_netmask, cmd_broadcast, cmd_mtu)
+        cmd = "ip link set {} {}".format(self.iface, cmd_mtu)
+        cmd_ip = "ip addr add {}/24 dev {}".format(ip, self.iface)
+        cmd_up = "ip link set {} up".format(self.iface)
+        subprocess.check_call(cmd_ip, shell=True)
         subprocess.check_call(cmd, shell=True)
+        subprocess.check_call(cmd_up, shell=True)
         self.ip = ip
+
+    def set_ip(self, ip):
+        cmd_remove = "ip addr del {}/24 dev {}".format(self.ip, self.iface)
+        cmd_add = "ip addr add {}/24 dev {}".format(ip, self.iface)
 
     def __routing_init(self):
         #TODO: Apply routing rules. Depend on parameter 'mode'.
