@@ -2,6 +2,8 @@
 
 from RF24 import RF24, RF24_PA_LOW, RF24_PA_MAX, RF24_2MBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
 
+import utilities as util
+
 SPI0 = {
     'SPI':0,
     'MOSI':10,
@@ -88,3 +90,10 @@ class Radio:
         # Flush buffers
         radio.flush_rx()
         radio.flush_tx()
+
+    def transmit(self):
+        #if data.size>mtu: util.fragmet(data)
+        pass
+
+    def receive(self):
+        pass
