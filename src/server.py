@@ -30,13 +30,15 @@ class Server:
         Writes to TUN interface. If successful returns true, else false.
         """
         #Expect buffer[i, q: Queue]
-        for i in buffer:
+
+        for queue in buffer:
             try:
-                data = buffer[i].get(False)
+                if queue.empty(): continue
+                data = queue.get(False)
                 written = self.tun.write(data)
                 return written
             except Exception as e:
-                print('Buffer pipe {}: \n{}'.format(i, e))
+                print('Server write(): \n{}'.format(e.with_traceback))
 
     def set_ip(self, ip):
         """
