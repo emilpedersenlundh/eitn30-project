@@ -32,7 +32,7 @@ if __name__ == '__main__':
         expected = (test_data)
         if role == "BASE":
             actual = rf.receive(10, data_buffer)
-            print("Expected = {}\nActual = {}\nDATA_BUFFER = {}".format(list(map(hex, list(expected))), list(map(hex, list(actual))), data_buffer[0]))
+            print("Expected = {}\nActual = {}\nDATA_BUFFER = {}".format(list(map(hex, list(expected))), list(map(hex, list(actual)))))
             assert expected == actual
         else:
             status = False
