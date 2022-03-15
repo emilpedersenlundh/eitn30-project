@@ -8,7 +8,9 @@ import subprocess
 from multiprocessing import Queue
 
 class Server:
-
+    """
+    Starts a server in mode [BASE | NODE] with corresponding TUN device.
+    """
     def __init__(self, mode: str):
 
         self.iface = 'longge'
@@ -88,7 +90,7 @@ class Interface:
         cmd_route = "ip route change default via {}/24 dev {}".format(ip, self.iface)
         subprocess.check_call(cmd_remove, shell=True)
         subprocess.check_call(cmd_add, shell=True)
-        subprocess.check_call(cmd_route, shell=True)
+        if self.mode == 'NODE': subprocess.check_call(cmd_route, shell=True)
         self.ip = ip
 
     def __set_interface(self, ip):
