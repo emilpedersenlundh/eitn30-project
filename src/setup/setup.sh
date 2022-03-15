@@ -39,6 +39,9 @@ fi
 #Update repository lists
 echo $password | sudo -S apt update
 
+#Install dependencies
+sudo apt install -y iptables
+
 #SPI Setup
 #TODO: Add boot config check
 #TODO: Check available SPI devices
