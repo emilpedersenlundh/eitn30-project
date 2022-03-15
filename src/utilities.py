@@ -1,6 +1,7 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 import numpy as np
 
+# Data handling
 def fragment(data) -> list:
 
     nbr_chunks = 0
@@ -29,3 +30,13 @@ def fragment(data) -> list:
     fragmented = np.array(bytearray(data)).reshape(nbr_chunks, chunk_size)
 
     return fragmented.tolist()
+
+# Status tools
+def status(parameters: dict):
+    """
+    Prints a status bar in the terminal. Parameters should be structured as status_type:status_value.
+    """
+    message = ''
+    for key in parameters:
+        message += "|{}: {} ".format(key, parameters(key))
+    print(message, end='\r')
