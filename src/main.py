@@ -10,15 +10,11 @@ if __name__ == "__main__":
     mode = 'base'
     s = server(mode)
     s.set_ip('10.10.10.1')
-    i = 0
 
     while True:
         try:
-            i += 1
-            if i == 255: i = 1
-            s.set_ip('10.10.10.{}'.format(i))
             print("Currently set IP: {}".format(s.ip), end='\r')
-            sleep(5)
+            sleep(1)
 
         except KeyboardInterrupt:
             print("\nKeyboard Interrupt\n")
