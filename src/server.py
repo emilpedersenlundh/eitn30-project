@@ -67,6 +67,7 @@ class Interface:
 
     def __delete__(self):
         self.tun.close()
+        subprocess.check_call('ip link delete dev {}'.format(self.iface))
 
     def read(self):
         packet = os.read(self.tun.fileno(), self.mtu)
