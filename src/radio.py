@@ -91,9 +91,9 @@ class Radio:
         radio.flush_rx()
         radio.flush_tx()
 
-    def transmit(self):
-        #if data.size>mtu: util.fragmet(data)
+    def transmit(self, data) -> bool:
+        #if data.size>mtu: data = util.fragment(data)
         pass
 
-    def receive(self):
+    def receive(self) -> bytes:
         pass
