@@ -38,5 +38,5 @@ def status(parameters: dict):
     """
     message = ''
     for key in parameters:
-        message += "|{}: {} ".format(key, parameters(key))
+        message += "{}: {}| ".format(key, parameters(key))
     print(message, end='\r')
