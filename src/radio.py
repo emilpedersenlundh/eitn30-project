@@ -43,6 +43,9 @@ class Radio:
         self.rx_radio = RF24(SPI1['ce'], SPI1['SPI'])
         self.setup(self.tx_radio, mode)
         self.setup(self.rx_radio, mode)
+        self.received: int = 0
+        self.transmitted: int = 0
+        self.dropped: int = 0
 
     def setup(self, radio, mode):
         """
@@ -93,7 +96,11 @@ class Radio:
 
     def transmit(self, data) -> bool:
         #if data.size>mtu: data = util.fragment(data)
+        #if successful: self.transmitted += 1
+        #else: self.dropped += 1
         pass
 
     def receive(self) -> bytes:
+
+        #if successful: self.received += 1
         pass
