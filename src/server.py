@@ -17,11 +17,14 @@ class Server:
         print("Started server {}:{} as {}".format(self.iface, self.ip, self.mode))
 
     def read(self):
+        """
+        Read from TUN interface.
+        """
         self.tun.read()
 
     def write(self, buffer):
         """
-        Writes to Tun interface. If successful returns true, else false.
+        Writes to TUN interface. If successful returns true, else false.
         """
         for i in buffer:
             try:
@@ -82,10 +85,7 @@ class Interface:
         """
         Applies settings to the TUN interface.
         """
-        #cmd_netmask = 'netmask 255.255.255.0'
-        #cmd_broadcast = 'broadcast 10.10.10.255'
         cmd_mtu = "mtu {}".format(self.mtu)
-        #cmd = "ifconfig {} {} {} {} {}".format(self.iface, self.ip, cmd_netmask, cmd_broadcast, cmd_mtu)
         cmd = "ip link set {} {}".format(self.iface, cmd_mtu)
         cmd_ip = "ip addr add {}/24 dev {}".format(ip, self.iface)
         cmd_up = "ip link set {} up".format(self.iface)
@@ -95,6 +95,9 @@ class Interface:
         self.ip = ip
 
     def set_ip(self, ip):
+        """
+        Sets the IP of the server and TUN interface.
+        """
         cmd_remove = "ip addr del {}/24 dev {}".format(self.ip, self.iface)
         cmd_add = "ip addr add {}/24 dev {}".format(ip, self.iface)
         subprocess.check_call(cmd_remove, shell=True)
