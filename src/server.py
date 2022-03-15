@@ -134,3 +134,4 @@ class Interface:
         old = "#net.ipv4.ip_forward=1"
         new = "net.ipv4.ip_forward=1"
         cmd = "sed -i 's/{}/{}/g' /etc/sysctl.conf".format(old, new)
+        subprocess.check_call(cmd, shell=True)
