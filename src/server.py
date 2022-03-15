@@ -19,7 +19,7 @@ class Server:
         self.tun = Interface(self.iface, self.ip, self.mode)
         print("Started server {}:{} as {}".format(self.iface, self.ip, self.mode))
 
-    def read(self):
+    def read(self) -> bytes:
         """
         Read from TUN interface.
         """
