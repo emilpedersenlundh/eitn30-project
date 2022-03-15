@@ -19,24 +19,27 @@ class Server:
         self.tun = Interface(self.iface, self.ip, self.mode)
         print("Started server {}:{} as {}".format(self.iface, self.ip, self.mode))
 
-    def read(self):
+    def read(self) -> bytes:
         """
         Read from TUN interface.
         """
-        self.tun.read()
+        return self.tun.read()
 
     def write(self, buffer: list[Queue]) -> bool:
         """
         Writes to TUN interface. If successful returns true, else false.
         """
         #Expect buffer[i, q: Queue]
-        for i in buffer:
+        written = False
+        for queue in buffer:
             try:
-                data = buffer[i].get(False)
+                if queue.empty(): continue
+                data = queue.get(False)
                 written = self.tun.write(data)
                 return written
             except Exception as e:
-                print('Buffer pipe {}: \n{}'.format(i, e))
+                print('Server write(): \n{}'.format(e.with_traceback))
+        return written
 
     def set_ip(self, ip):
         """
@@ -137,3 +140,4 @@ class Interface:
         new = "net.ipv4.ip_forward=1"
         cmd = "sed -i 's/{}/{}/g' /etc/sysctl.conf".format(old, new)
         subprocess.check_call(cmd, shell=True)
+        subprocess.check_call('sysctl -p', shell=True, stdout=subprocess.DEVNULL)
