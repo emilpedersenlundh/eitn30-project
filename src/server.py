@@ -85,10 +85,11 @@ class Interface:
         """
         cmd_remove = "ip addr del {}/24 dev {}".format(self.ip, self.iface)
         cmd_add = "ip addr add {}/24 dev {}".format(ip, self.iface)
+        cmd_route = "ip route change default via {}/24 dev {}".format(ip, self.iface)
         subprocess.check_call(cmd_remove, shell=True)
         subprocess.check_call(cmd_add, shell=True)
+        subprocess.check_call(cmd_route, shell=True)
         self.ip = ip
-        self.__routing_init()
 
     def __set_interface(self, ip):
         """
@@ -102,6 +103,7 @@ class Interface:
         subprocess.check_call(cmd, shell=True)
         subprocess.check_call(cmd_up, shell=True)
         self.ip = ip
+        self.__routing_init()
 
     def __routing_init(self):
         """
@@ -112,6 +114,8 @@ class Interface:
         cmd_base_c = 'iptables -A FORWARD -i {} -o eth0 -j ACCEPT'.format(self.iface)
 
         cmd_node = 'ip route add default via {} dev {}'.format(self.ip, self.iface)
+
+        self.__enable_forwarding()
 
         if self.mode == 'BASE':
             try:
@@ -125,3 +129,8 @@ class Interface:
                 subprocess.check_call(cmd_node, shell=True)
             except subprocess.CalledProcessError as e:
                 print(e.output)
+
+    def __enable_forwarding(self):
+        old = "#net.ipv4.ip_forward=1"
+        new = "net.ipv4.ip_forward=1"
+        cmd = "sed -i 's/{}/{}/g' /etc/sysctl.conf".format(old, new)
