@@ -97,6 +97,9 @@ class Interface:
     def set_ip(self, ip):
         cmd_remove = "ip addr del {}/24 dev {}".format(self.ip, self.iface)
         cmd_add = "ip addr add {}/24 dev {}".format(ip, self.iface)
+        subprocess.check_call(cmd_remove, shell=True)
+        subprocess.check_call(cmd_add, shell=True)
+        self.ip = ip
 
     def __routing_init(self):
         #TODO: Apply routing rules. Depend on parameter 'mode'.
