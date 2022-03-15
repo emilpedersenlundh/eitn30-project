@@ -1,6 +1,5 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
-from os import pipe
 from RF24 import RF24, RF24_PA_LOW, RF24_PA_MAX, RF24_2MBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
 import time
 import struct
@@ -96,10 +95,10 @@ class Radio:
         radio.flush_rx()
         radio.flush_tx()
 
-    def transmit(self, address, data) -> float:
+    def transmit(self, address, data) -> bool:
 
         self.tx_radio.openWritingPipe(address)
-        print("Opened writing pipe with address: {}".format(address)) 
+        print("Opened writing pipe with address: {}".format(address))
 
         status = []
         chunks = []
@@ -146,7 +145,7 @@ class Radio:
 
             # Data available to send
             for index, chunk in enumerate(chunks):
-                
+
                 retransmit = True
                 while(retransmit):
                     # Last fragment part will have id 0
@@ -166,7 +165,7 @@ class Radio:
                         status.append(False)
 
                     else:
-                        
+
                         retransmit = False
                         status.append(True)
 
@@ -186,13 +185,12 @@ class Radio:
 
         self.transmitted += sum(status)
         self.dropped += len(status) - sum(status)
-        
+
         if(False in status):
 
             return False
 
         return True
-        
 
     def receive(self, timeout, data_buffer) -> bytes:
 
@@ -226,7 +224,7 @@ class Radio:
 
                         # First fragment
                         fragmented[pipe_nbr] = True
-                    
+
                     if(fragmented[pipe_nbr]):
 
                         if(id[0] - id[1] == 1 or id[0] == 1):
@@ -240,20 +238,20 @@ class Radio:
                 elif(id[0] == 0):
 
                     if(fragmented[pipe_nbr]):
-                        
+
                         # Last fragmented packet, remove id and padding
                         padding_size = payload[payload_size - id_offset - 1]
                         fragment_buffer[pipe_nbr].append(bytes(payload[:payload_size - padding_size - id_offset]))
-                        
+
                         # Add all fragments to one element in the buffer
                         data_buffer[pipe_nbr].append(b''.join(fragment_buffer[pipe_nbr]))
                         return b''.join(fragment_buffer[pipe_nbr])
                         fragment_buffer[pipe_nbr].clear()
                         fragmented[pipe_nbr] = False
-                        
+
 
                     else:
-                        
+
                         # Single packet, not fragmented
                         data_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset - 1]))
                         return bytes(payload[: payload_size - id_offset - 1])
