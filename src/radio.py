@@ -156,8 +156,6 @@ class Radio:
                     buffer = bytes(chunk)
                     buffer += struct.pack(">H", id)
 
-                    print("Sending {}".format(list(map(hex, list(buffer)))))
-
                     # Send all chunks one at a time
                     result = self.tx_radio.write(buffer, False)
 
