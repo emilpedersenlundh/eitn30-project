@@ -23,7 +23,7 @@ class Server:
         """
         self.tun.read()
 
-    def write(self, buffer: list[Queue]):
+    def write(self, buffer: list[Queue]) -> bool:
         """
         Writes to TUN interface. If successful returns true, else false.
         """
@@ -73,7 +73,7 @@ class Interface:
         packet = os.read(self.tun.fileno(), self.mtu)
         return packet
 
-    def write(self, buffer):
+    def write(self, buffer) -> bool:
         written = os.write(self.tun.fileno(), buffer)
         if written != 0:
             return True
