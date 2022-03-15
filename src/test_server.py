@@ -15,12 +15,14 @@ if __name__ == "__main__":
     s = server('base')
     q = Queue()
     l = list()
-    data = 'helloworld' #bytes('helloworld','utf-8')
+    data = bytes('helloworld','utf-8')
 
     q.put(data, False)
     l.append(q)
-
-    s.write(l)
+    success = s.write(l)
+    print(success)
+    element = l.pop()
     read = s.read()
+    print(type(read))
 
-    print(l, read)
+    print("{}\n{}".format(element.get(False), read))
