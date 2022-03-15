@@ -1,6 +1,5 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
-from asyncio import QueueEmpty
 import os
 import fcntl
 import struct
@@ -34,7 +33,7 @@ class Server:
                 data = buffer[i].get(False)
                 written = self.tun.write(data)
                 return written
-            except QueueEmpty as e:
+            except Exception as e:
                 print('Buffer pipe {}: \n{}'.format(i, e))
 
     def set_ip(self, ip):
