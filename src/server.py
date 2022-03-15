@@ -23,7 +23,7 @@ class Server:
         """
         Read from TUN interface.
         """
-        self.tun.read()
+        return self.tun.read()
 
     def write(self, buffer: list[Queue]) -> bool:
         """
