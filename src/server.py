@@ -15,7 +15,7 @@ class Server:
 
         self.iface = 'longge'
         self.ip = '10.10.10.{}'.format(random.randint(2,254))
-        self.mode = mode.upper
+        self.mode = mode.upper()
         self.tun = Interface(self.iface, self.ip, self.mode)
         print("Started server {}:{} as {}".format(self.iface, self.ip, self.mode))
 
