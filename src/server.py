@@ -39,6 +39,7 @@ class Server:
                 return written
             except Exception as e:
                 print('Server write(): \n{}'.format(e.with_traceback))
+        return False
 
     def set_ip(self, ip):
         """
