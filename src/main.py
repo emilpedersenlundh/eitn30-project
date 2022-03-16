@@ -21,7 +21,7 @@ def run_node(radio: radio, server: server, data_buffer):
     received: bool = False
 
     data = server.read()
-    print(str(list(map(hex, list(data)))))
+    #print(*[x.replace('0x', '') for x in list(map(hex, list(data)))])
     while data is None:
         data = server.read()
 
@@ -30,6 +30,7 @@ def run_node(radio: radio, server: server, data_buffer):
         transmitted = radio.transmit(PIPE_ADDRESSES[1], data)
 
     received = radio.receive(10, data_buffer)
+    print(*[x.replace('0x', '') for x in list(map(hex, bytearray(data_buffer[1])))])
     if received: server.write(data_buffer)
 
 def run_base(radio: radio, server: server, data_buffer):
@@ -40,6 +41,8 @@ def run_base(radio: radio, server: server, data_buffer):
     while not received:
         received = radio.receive(timeout, data_buffer)
     server.write(data_buffer)
+    print(str(data_buffer[1]))
+    print(*[x.replace('0x', '') for x in list(map(hex, bytearray(data_buffer[1])))])
 
     data = server.read()
     while data is None:
