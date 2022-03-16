@@ -128,7 +128,6 @@ class Radio:
             buffer = bytes(chunks[0])
             buffer += struct.pack(">H", id)
 
-            print("Sending data: {}".format(buffer))
             result = self.tx_radio.write(buffer, False)
 
             if not result:
@@ -160,7 +159,6 @@ class Radio:
                     buffer = bytes(chunk)
                     buffer += struct.pack(">H", id)
 
-                    print("Sending data (fragmented): {}".format(buffer))
                     # Send all chunks one at a time
                     result = self.tx_radio.write(buffer, False)
 
@@ -247,7 +245,6 @@ class Radio:
                         fragment_buffer[pipe_nbr].append(bytes(payload[:payload_size - padding_size - id_offset]))
 
                         # Add all fragments to one element in the buffer
-                        print("Received data (fragmented): {}".format(b''.join(fragment_buffer[pipe_nbr])))
                         data_buffer[pipe_nbr].append(b''.join(fragment_buffer[pipe_nbr]))
                         fragment_buffer[pipe_nbr].clear()
                         fragmented[pipe_nbr] = False                   
@@ -255,7 +252,6 @@ class Radio:
                     else:
 
                         # Single packet, not fragmented
-                        print("Received data: {}".format(bytes(payload[: payload_size - id_offset - 1])))
                         data_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset - 1]))
                     
                     return True
