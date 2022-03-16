@@ -18,17 +18,14 @@ PIPE_ADDRESSES = [
 def run_node(radio):
     pass
 
-def run_base(radio, server data_buffer):
+def run_base(radio, server, data_buffer):
 
     received = False
     timeout = 10
 
     while not received:
         received = radio.receive(timeout, data_buffer)
-    
-    
-
-
+    return s.write(data_buffer)
 
 if __name__ == "__main__":
 
@@ -43,10 +40,11 @@ if __name__ == "__main__":
     try:
         print("Currently set IP: {}".format(s.ip), end='\r')
 
-        if(role == "BASE"):
-            run_base(r, data_buffer)
-        else:
-            run_node(r)
+        while True:
+            if(role == "BASE"):
+                run_base(r, s, data_buffer)
+            else:
+                run_node(r)
 
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt\n")
