@@ -24,9 +24,9 @@ def run_node(radio: radio, server: server, data_buffer):
     while data is None:
         data = server.read()
 
-    transmitted = radio.transmit(PIPE_ADDRESSES[0], data)
+    transmitted = radio.transmit(PIPE_ADDRESSES[1], data)
     while not transmitted:
-        transmitted = radio.transmit(PIPE_ADDRESSES[0], data)
+        transmitted = radio.transmit(PIPE_ADDRESSES[1], data)
 
     received = radio.receive(10, data_buffer)
     if received: server.write(data_buffer)
