@@ -91,10 +91,13 @@ class Interface:
         """
         cmd_remove = "ip addr del {}/24 dev {}".format(self.ip, self.iface)
         cmd_add = "ip addr add {}/24 dev {}".format(ip, self.iface)
-        cmd_route = "ip route change default via {}/24 dev {}".format(ip, self.iface)
+        cmd_route_remove = "ip route delete default via {}/24 dev {}".format(ip, self.iface)
+        cmd_route_add = "ip route add default via {}/24 dev {}".format(ip, self.iface)
         subprocess.check_call(cmd_remove, shell=True)
         subprocess.check_call(cmd_add, shell=True)
-        if self.mode == 'NODE': subprocess.check_call(cmd_route, shell=True)
+        if self.mode == 'NODE':
+            subprocess.check_call(cmd_route_remove, shell=True)
+            subprocess.check_call(cmd_route_add, shell=True)
         self.ip = ip
 
     def __set_interface(self, ip):
