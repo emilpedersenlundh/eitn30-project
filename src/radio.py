@@ -97,6 +97,9 @@ class Radio:
 
     def transmit(self, address, data) -> bool:
 
+        if not data:
+            return False
+
         self.tx_radio.openWritingPipe(address)
         print("Opened writing pipe with address: {}".format(address))
 
