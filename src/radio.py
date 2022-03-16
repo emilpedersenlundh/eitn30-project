@@ -132,12 +132,13 @@ class Radio:
             if not result:
 
                 status.append(False)
-                self.transmitted += 1
+                self.dropped += 1
+                return False
 
             else:
 
                 status.append(True)
-                self.dropped += 1
+                self.transmitted += 1
 
         # Otherwise send all available chunks and append id > 0
         else:
@@ -148,33 +149,25 @@ class Radio:
             # Data available to send
             for index, chunk in enumerate(chunks):
 
-                retransmit = True
-                timeout = 10
-                start_2 = time.time()
-                while(retransmit):
+                # Last fragment part will have id 0
+                if(index == len(chunks) - 1):
 
-                    if(time.time() - start_2 > timeout):
-                        print("Timeout tx")
-                        return False
+                    id = 0
 
-                    # Last fragment part will have id 0
-                    if(index == len(chunks) - 1):
+                buffer = bytes(chunk)
+                buffer += struct.pack(">H", id)
 
-                        id = 0
+                # Send all chunks one at a time
+                result = self.tx_radio.write(buffer, False)
 
-                    buffer = bytes(chunk)
-                    buffer += struct.pack(">H", id)
+                if not result:
 
-                    # Send all chunks one at a time
-                    result = self.tx_radio.write(buffer, False)
+                    status.append(False)
+                    return False
 
-                    if not result:
-                        status.append(False)
+                else:
 
-                    else:
-
-                        retransmit = False
-                        status.append(True)
+                    status.append(True)
 
                 id += 1
 
