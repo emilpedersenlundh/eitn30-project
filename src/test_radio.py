@@ -38,9 +38,12 @@ if __name__ == '__main__':
             assert expected == actual
         else:
             status = False
-            while not status:
-                status = rf.transmit(PIPE_ADDRESSES[3], test_data)
+            pipe = 1
+            while not status or pipe < 6:
+                status = rf.transmit(PIPE_ADDRESSES[0], test_data)
+                print(pipe)
                 print("status = {}".format(status))
+                pipe += 1
 
     except KeyboardInterrupt:
         print("\n----Keyboard interrupt----\n")

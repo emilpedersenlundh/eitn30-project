@@ -37,10 +37,10 @@ def mode(userinput: str=""):
     print(userinput)
     if userinput == "BASE" or userinput == "NODE":
         mode = userinput
+        print("Role = {}".format(mode))
     else:
         print("No mode specified, defaulting to NODE..")
         mode = "NODE"
-    print("Role = {}".format(mode))
     return mode
 
 # Status tools
