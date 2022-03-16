@@ -61,7 +61,7 @@ class Interface:
         self.mode = mode
         self.mtu = 1500
         self.ip = ip
-
+        
         # Opens already existing TUN interface
         self.tun = open('/dev/net/tun', 'r+b', 0)
         ifr= struct.pack('16sH', bytes(iface,'utf-8'), IFF_TUN | IFF_NO_PI)
@@ -118,12 +118,12 @@ class Interface:
         """
         Applies routing rules depending on operating mode.
         """
-        cmd_base_a = 'iptables -t nat -A POSTROUTING -o {} -j MASQUERADE'.format(self.iface)
+        cmd_base_a = 'iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE'
         cmd_base_b = 'iptables -A FORWARD -i eth0 -o {} -m state --state RELATED,ESTABLISHED -j ACCEPT'.format(self.iface)
         cmd_base_c = 'iptables -A FORWARD -i {} -o eth0 -j ACCEPT'.format(self.iface)
 
-        cmd_node = 'ip route add default via {} dev {}'.format(self.ip, self.iface)
-
+        cmd_node = 'ip route add 8.8.8.8 via {} dev {}'.format(self.ip, self.iface)
+        
         self.__enable_forwarding()
 
         if self.mode == 'BASE':
