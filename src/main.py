@@ -38,7 +38,12 @@ def run_base(radio: radio, server: server, data_buffer):
 
     while not received:
         received = radio.receive(timeout, data_buffer)
-    return server.write(data_buffer)
+    server.write(data_buffer)
+
+    data = server.read()
+    while data is None:
+        data = server.read()
+    return radio.transmit(PIPE_ADDRESSES[1], data)
 
 if __name__ == "__main__":
 
