@@ -151,10 +151,10 @@ class Radio:
 
                 retransmit = True
                 timeout = 10
-                start = time.time()
+                start_2 = time.time()
                 while(retransmit):
 
-                    if(time.time() - start > timeout):
+                    if(time.time() - start_2 > timeout):
                         print("Timeout tx")
                         return False
 
