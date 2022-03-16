@@ -176,12 +176,12 @@ class Radio:
         if(fragment):
 
             bps = nbr_chunks*len(chunks[0])*8*len(status)/total_time
-            print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), bps), end='\r')
+            #print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), bps), end='\r')
 
         else:
 
             bps = len(chunks[0])*8*len(status)/total_time
-            print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), bps), end='\r')
+            #print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), bps), end='\r')
 
         self.transmitted += sum(status)
         self.dropped += len(status) - sum(status)
