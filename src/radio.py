@@ -154,7 +154,7 @@ class Radio:
                 start = time.time()
                 while(retransmit):
 
-                    if(time.time() - start < timeout):
+                    if(time.time() - start > timeout):
                         print("Timeout tx")
                         return False
 
