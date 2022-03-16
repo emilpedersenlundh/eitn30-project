@@ -190,7 +190,7 @@ class Radio:
 
         return True
 
-    def receive(self, timeout, data_buffer) -> bytes:
+    def receive(self, timeout, data_buffer) -> bool:
 
         print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(self.rx_radio.getPALevel(), SPI_SPEED))
 
@@ -243,18 +243,17 @@ class Radio:
 
                         # Add all fragments to one element in the buffer
                         data_buffer[pipe_nbr].append(b''.join(fragment_buffer[pipe_nbr]))
-                        return b''.join(fragment_buffer[pipe_nbr])
                         fragment_buffer[pipe_nbr].clear()
-                        fragmented[pipe_nbr] = False
-
+                        fragmented[pipe_nbr] = False                   
 
                     else:
 
                         # Single packet, not fragmented
                         data_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset - 1]))
-                        return bytes(payload[: payload_size - id_offset - 1])
+                    
+                    return True
 
         # Timeout
         print("Timeout")
         self.rx_radio.stopListening()
-        return 0
+        return False
