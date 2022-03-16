@@ -155,6 +155,7 @@ class Radio:
                 while(retransmit):
 
                     if(time.time() - start < timeout):
+                        print("Timeout tx")
                         return False
 
                     # Last fragment part will have id 0
