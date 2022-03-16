@@ -87,9 +87,9 @@ class Radio:
         for pipe, address in enumerate(PIPE_ADDRESSES):
             if(mode == "BASE"):
                 radio.openReadingPipe(pipe, address)
-                print("Opened reading pipe: {} with address: {}".format(pipe, address))
+                #print("Opened reading pipe: {} with address: {}".format(pipe, address))
         radio.openWritingPipe(PIPE_ADDRESSES[0])
-        print("Opened writing pipe with address: {}".format(address))
+        #print("Opened writing pipe with address: {}".format(address))
 
         # Flush buffers
         radio.flush_rx()
@@ -101,7 +101,7 @@ class Radio:
             return False
 
         self.tx_radio.openWritingPipe(address)
-        print("Opened writing pipe with address: {}".format(address))
+        #print("Opened writing pipe with address: {}".format(address))
 
         status = []
         chunks = []
@@ -177,12 +177,12 @@ class Radio:
         if(fragment):
 
             bps = nbr_chunks*len(chunks[0])*8*len(status)/total_time
-            print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), bps))
+            print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), bps), end='\r')
 
         else:
 
             bps = len(chunks[0])*8*len(status)/total_time
-            print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), bps))
+            print('{} successful transmissions, {} failures, {} bps\n'.format(sum(status), len(status)-sum(status), bps), end='\r')
 
         self.transmitted += sum(status)
         self.dropped += len(status) - sum(status)
@@ -195,7 +195,7 @@ class Radio:
 
     def receive(self, timeout, data_buffer) -> bool:
 
-        print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(self.rx_radio.getPALevel(), SPI_SPEED))
+        #print('Rx NRF24L01+ started w/ power {}, SPI freq: {}hz'.format(self.rx_radio.getPALevel(), SPI_SPEED))
 
         nbr_pipes = 6 # len(ip_table)
         fragmented = [False for _ in range(nbr_pipes)]
@@ -247,13 +247,13 @@ class Radio:
                         # Add all fragments to one element in the buffer
                         data_buffer[pipe_nbr].append(b''.join(fragment_buffer[pipe_nbr]))
                         fragment_buffer[pipe_nbr].clear()
-                        fragmented[pipe_nbr] = False                   
+                        fragmented[pipe_nbr] = False
 
                     else:
 
                         # Single packet, not fragmented
                         data_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset - 1]))
-                    
+
                     return True
 
         # Timeout
