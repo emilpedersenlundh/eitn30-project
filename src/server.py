@@ -16,8 +16,8 @@ class Server:
         self.iface = 'longge'
         self.ip = '10.10.10.{}'.format(random.randint(2,254))
         self.mode = mode.upper()
-        if self.mode == 'BASE': self.set_ip('10.10.10.1')
         self.tun = Interface(self.iface, self.ip, self.mode)
+        if self.mode == 'BASE': self.set_ip('10.10.10.1')
         print("Started server {}:{} as {}".format(self.iface, self.ip, self.mode))
 
     def read(self) -> bytes:
