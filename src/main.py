@@ -19,7 +19,13 @@ def run_node(radio):
     pass
 
 def run_base(radio, data_buffer):
-    pass
+
+    received = 0
+    timeout = 10
+
+    while received == 0:
+        received = radio.receive(timeout, data_buffer)
+
 
 
 if __name__ == "__main__":

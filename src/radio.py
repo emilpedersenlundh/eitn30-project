@@ -257,3 +257,4 @@ class Radio:
         # Timeout
         print("Timeout")
         self.rx_radio.stopListening()
+        return 0
