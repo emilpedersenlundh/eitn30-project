@@ -150,7 +150,13 @@ class Radio:
             for index, chunk in enumerate(chunks):
 
                 retransmit = True
+                timeout = 10
+                start = time.time()
                 while(retransmit):
+
+                    if(time.time() - start < timeout):
+                        return False
+
                     # Last fragment part will have id 0
                     if(index == len(chunks) - 1):
 
@@ -186,10 +192,6 @@ class Radio:
 
         self.transmitted += sum(status)
         self.dropped += len(status) - sum(status)
-
-        if(False in status):
-
-            return False
 
         return True
 
