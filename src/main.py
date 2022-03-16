@@ -56,7 +56,7 @@ if __name__ == "__main__":
             if(role == "BASE"):
                 run_base(r, s, data_buffer)
             else:
-                run_node(r)
+                run_node(r, s, data_buffer)
 
     except KeyboardInterrupt:
         print("\nKeyboard Interrupt\n")
