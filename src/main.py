@@ -21,6 +21,7 @@ def run_node(radio: radio, server: server, data_buffer):
     received: bool = False
 
     data = server.read()
+    print(str(list(map(hex, list(data)))))
     while data is None:
         data = server.read()
 
