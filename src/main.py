@@ -34,14 +34,13 @@ if __name__ == "__main__":
 
     role = utilities.mode(input("Select mode (BASE or NODE): ").upper())
 
+    # Start services
     s = server(role)
-    s.set_ip('10.10.10.1')
-
     r = radio.Radio(role)
 
     try:
         print("Currently set IP: {}".format(s.ip), end='\r')
-        
+
         if(role == "BASE"):
             run_base(r, data_buffer)
         else:
