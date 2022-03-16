@@ -4,7 +4,8 @@ from time import sleep
 
 # Project packages
 from server import Server as server
-import radio, utilities
+from radio import Radio as radio
+import utilities as util
 
 PIPE_ADDRESSES = [
     b"\xE7\xD3\xF0\x35\x77",
@@ -15,8 +16,12 @@ PIPE_ADDRESSES = [
     b"\xC2\xC2\xC2\xC2\xC6"
 ]
 
-def run_node(radio):
-    pass
+def run_node(radio: radio, server: server):
+    data = server.read()
+    while data is None:
+        data = server.read()
+    radio.transmit(address, data)
+
 
 def run_base(radio, server, data_buffer):
 
@@ -31,12 +36,11 @@ if __name__ == "__main__":
 
     data_buffer = [[] for _ in range(6)]
 
-    role = utilities.mode(input("Select mode (BASE or NODE): ").upper())
+    role = util.mode(input("Select mode (BASE or NODE): ").upper())
 
     # Start services
     s = server(role)
-    r = radio.Radio(role)
-
+    r = radio(role)
     try:
         print("Currently set IP: {}".format(s.ip), end='\r')
 
