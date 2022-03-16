@@ -40,9 +40,10 @@ def run_base(radio: radio, server: server, data_buffer):
 
     while not received:
         received = radio.receive(timeout, data_buffer)
-    server.write(data_buffer)
     print(str(data_buffer[1]))
     print(*[x.replace('0x', '') for x in list(map(hex, bytearray(data_buffer[1])))])
+    server.write(data_buffer)
+    
 
     data = server.read()
     while data is None:
