@@ -26,7 +26,7 @@ class Server:
         """
         return self.tun.read()
 
-    def write(self, buffer: list[Queue]) -> bool:
+    def write(self, buffer: list[list]) -> bool:
         """
         Writes to TUN interface. If successful returns true, else false.
         """
@@ -34,8 +34,8 @@ class Server:
         written = False
         for queue in buffer:
             try:
-                if queue.empty(): continue
-                data = queue.get(False)
+                if not queue: continue
+                data = queue.pop(0)
                 written = self.tun.write(data)
                 return written
             except Exception as e:
