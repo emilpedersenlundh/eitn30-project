@@ -18,13 +18,15 @@ PIPE_ADDRESSES = [
 def run_node(radio):
     pass
 
-def run_base(radio, data_buffer):
+def run_base(radio, server data_buffer):
 
-    received = 0
+    received = False
     timeout = 10
 
-    while received == 0:
+    while not received:
         received = radio.receive(timeout, data_buffer)
+    
+    
 
 
 
