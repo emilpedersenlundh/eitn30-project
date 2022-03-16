@@ -16,12 +16,20 @@ PIPE_ADDRESSES = [
     b"\xC2\xC2\xC2\xC2\xC6"
 ]
 
-def run_node(radio: radio, server: server):
+def run_node(radio: radio, server: server, data_buffer):
+    transmitted: bool = False
+    received: bool = False
+
     data = server.read()
     while data is None:
         data = server.read()
-    radio.transmit(address, data)
 
+    transmitted = radio.transmit(PIPE_ADDRESSES[0], data)
+    while not transmitted:
+        transmitted = radio.transmit(PIPE_ADDRESSES[0], data)
+
+    received = radio.receive(10, data_buffer)
+    if received: server.write(data_buffer)
 
 def run_base(radio: radio, server: server, data_buffer):
 
