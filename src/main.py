@@ -30,7 +30,7 @@ def run_base(radio: radio, server: server, data_buffer):
 
     while not received:
         received = radio.receive(timeout, data_buffer)
-    return s.write(data_buffer)
+    return server.write(data_buffer)
 
 if __name__ == "__main__":
 
