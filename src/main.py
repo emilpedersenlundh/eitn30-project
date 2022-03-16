@@ -23,7 +23,7 @@ def run_node(radio: radio, server: server):
     radio.transmit(address, data)
 
 
-def run_base(radio, server, data_buffer):
+def run_base(radio: radio, server: server, data_buffer):
 
     received = False
     timeout = 10
