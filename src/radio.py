@@ -250,6 +250,10 @@ class Radio:
                         data_buffer[pipe_nbr].append(bytes(payload[: payload_size - id_offset - 1]))
 
                     return True
+                
+                else:
+                    print("Invalid id..")
+                    return False
 
         # Timeout
         print("Timeout")
