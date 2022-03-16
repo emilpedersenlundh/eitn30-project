@@ -127,7 +127,6 @@ class Radio:
 
             buffer = bytes(chunks[0])
             buffer += struct.pack(">H", id)
-
             result = self.tx_radio.write(buffer, False)
 
             if not result:
