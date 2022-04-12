@@ -1,14 +1,16 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
-from time import sleep
-import time
+import os
+import sys
+from time import sleep, time
 from multiprocessing import Process, Queue
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 
 # Project packages
-import radio, utilities
+from radio import Radio as radio
 from server import Server as server
+import utilities as util
 
 PIPE_ADDRESSES = [
     b"\xE7\xD3\xF0\x35\x77",
@@ -16,44 +18,34 @@ PIPE_ADDRESSES = [
     b"\xC2\xC2\xC2\xC2\xC3",
     b"\xC2\xC2\xC2\xC2\xC4",
     b"\xC2\xC2\xC2\xC2\xC5",
-    b"\xC2\xC2\xC2\xC2\xC6"
+    b"\xC2\xC2\xC2\xC2\xC6",
 ]
 
-time_axis = np.flip(np.linspace(0, 1, 0.001), axis=1)
-queue_len_axis = []
-latency = []
+latency: list[int] = []
+outcome: list[bool] = []
+queue_size: list[int] = []
 
-def add(q):
 
-    global time_axis
+def add(queue):
+    """Adds elements to a provided queue."""
+    measurement_count: int = 100
+    data = np.random.bytes(30)
 
-    data = bytes("HEJHEJHEJ", "UTF-8")
-    count = 0
+    for i in range(measurement_count):
+        queue.put(data)
 
-    while count < len(time_axis):
-        q.put(data)
-        queue_len_axis.append(q.qsize())
-        sleep(time_axis[count])
-        count += 1
 
-def receive(q):
+def transmit(queue):
+    """Transmits elements from the provided queue via radio."""
+    r = radio("NODE")
 
-    mode_select = input("Select mode (BASE or NODE): ").upper()
-    role = utilities.mode(mode_select)
-    r = radio.Radio(role)
-    kill = 0
-
-    while True and kill < 10000000:
-        if not q.empty():
-            start = time.time()
-            r.transmit(PIPE_ADDRESSES[1], q.get())
-            latency.append(time.time() - start)
-        kill += 1
+    if not queue.empty():
+        outcome.append(r.transmit(PIPE_ADDRESSES[1], queue.get()))
 
 
 def run_test(queue):
-    
-    rx = Process(target=receive, args=queue)
+
+    rx = Process(target=transmit, args=queue)
     tx = Process(target=add, args=queue)
 
     rx.start()
@@ -63,24 +55,13 @@ def run_test(queue):
     rx.join()
     tx.join()
 
-if __name__ == '__main__':
 
-    #Pseudo
-    """
-    Increase send rate while keeping receive rate consistent. Measure amount of elements in queue compared to send rate (amount>0 <-> rho>1).
-    """
+if __name__ == "__main__":
+
     queue = Queue()
     run_test(queue)
-
-    plt.plot(time_axis, queue_len_axis)
-    plt.xlabel = "time"
-    plt.ylabel = "queue_len"
-    plt.show()
-    
 
     try:
         pass
     except KeyboardInterrupt:
-        print("\n Keyboard Interrupt\n")
-        Process.kill()
-        quit()
+        print("\nKeyboard Interrupt\n")
