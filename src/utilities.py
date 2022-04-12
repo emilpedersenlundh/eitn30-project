@@ -12,43 +12,44 @@ def fragment(data) -> list:
     """
     chunk_size = 30
 
-    if((data_length % chunk_size) == 0):
+    if (data_length % chunk_size) == 0:
         nbr_chunks = data_length / chunk_size
     else:
         nbr_chunks = int((data_length - (data_length % chunk_size)) / chunk_size) + 1
 
-        #Padding with zeroes followed by padding size (max chunk_size  - 1 B)
+        # Padding with zeroes followed by padding size (max chunk_size  - 1 B)
         padding = [0 for _ in range(chunk_size - (data_length % chunk_size))]
-        #print(bytes(padding))
-        #Add length of padding in the last byte
-        #print("Number of padding bytes = {}".format(len(padding)))
+        # print(bytes(padding))
+        # Add length of padding in the last byte
+        # print("Number of padding bytes = {}".format(len(padding)))
         padding[len(padding) - 1] += len(padding)
         data += bytes(padding)
-        #print("Data = {}".format(bytearray(data)))
+        # print("Data = {}".format(bytearray(data)))
 
-    #Insert in numpy array and reshape into nbr_chunks clusters of size chunk_size
+    # Insert in numpy array and reshape into nbr_chunks clusters of size chunk_size
     fragmented = np.array(bytearray(data)).reshape(nbr_chunks, chunk_size)
 
     return fragmented.tolist()
 
-def mode(userinput: str=""):
-    
-    mode = ""
-    print(userinput)
+
+def mode() -> str:
+    """Parses mode input"""
+    userinput = input("Select mode (BASE or NODE): ").upper()
     if userinput == "BASE" or userinput == "NODE":
         mode = userinput
+        print("Role = {}".format(mode))
     else:
         print("No mode specified, defaulting to NODE..")
         mode = "NODE"
-    print("Role = {}".format(mode))
     return mode
+
 
 # Status tools
 def status(parameters: dict):
     """
     Prints a status bar in the terminal. Parameters should be structured as status_type:status_value.
     """
-    message = ''
+    message = ""
     for key in parameters:
         message += "{}: {}| ".format(key, parameters(key))
-    print(message, end='\r')
+    print(message, end="\r")
