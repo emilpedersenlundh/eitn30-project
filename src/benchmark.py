@@ -1,5 +1,7 @@
 #!/home/fideloper/.envs/eitn30-project/bin/python3
 
+"""Module for producing benchmark plots of the radio link."""
+
 from time import sleep, time_ns
 from multiprocessing import Process, Queue
 from numpy import random
@@ -8,8 +10,9 @@ import pandas as pd
 
 # Project packages
 from radio import Radio as radio
-from server import Server as server
-import utilities as util
+
+# from server import Server as server
+# import utilities as util
 
 PIPE_ADDRESSES = [
     b"\xE7\xD3\xF0\x35\x77",
@@ -23,18 +26,38 @@ X_RESOLUTION: int = 200  # Determines the amount of x axis data points, and the 
 
 
 def transmit(data: Queue, measurement_count=100, resolution=X_RESOLUTION):
-    """Transmits elements from the provided queue via radio."""
+    """Transmits elements from the provided queue via radio, and measures performance."""
     r = radio("NODE")
+    raw_data = []
     plot_data = []
 
     for i in range(resolution):
-        plot_data.append(_measure(r, data, measurement_count))
+        raw_data.append(_measure(r, data, measurement_count))
+
+    # TODO: Plot and save figure
+    for series in raw_data:
+        plot_data.append(_calc_median(series))
+
+    df = pd.DataFrame(
+        {
+            # TODO: Figure out how to differentiate sub plots
+            "packet_error_rate": plot_data[0],
+            "latency": plot_data[1],
+            "queue_size": plot_data[2],
+        }
+    )
+
+    df.plot(subplots=True, layout=(3, 1), sharex=True)
 
 
-def input(data_queue: Queue, resolution=X_RESOLUTION):
+def queue_input(data_queue: Queue, resolution=X_RESOLUTION):
     """Inputs data elements into provided queue."""
     for i in range(1, resolution + 1):
         _add(data_queue, element_count=100, interval=(1 / i))
+
+
+def plot(plot_data, x_resolution=X_RESOLUTION):
+    pass
 
 
 def _add(queue: Queue, element_count: int, interval: float):
@@ -71,26 +94,39 @@ def _measure(
     return [outcome, latency, queue_size]
 
 
-def plot(plot_data, x_resolution=X_RESOLUTION):
-    pass
+def _calc_median(index_data: list[list[bool], list[int], list[int]]):
+    """Calculates the median of each list in the provided list. Returns a 3 by 1 dataframe."""
+    data = pd.DataFrame(
+        {
+            "outcome": index_data(0),
+            "latency": index_data(1),
+            "queue_size": index_data(2),
+        }
+    )
+    return [
+        data["outcome"].sum() / 100,
+        data["latency"].median(),
+        data["queue_size"].median(),
+    ]
 
 
-def run_test(queue):
-    rx = Process(target=transmit, args=queue)
-    tx = Process(target=input, args=queue)
+def main(data_queue):
+    """Runs a multiprocessing main loop."""
+    receiver = Process(target=transmit, args=data_queue)
+    transmitter = Process(target=queue_input, args=data_queue)
 
-    rx.start()
+    receiver.start()
     sleep(1)
-    tx.start()
+    transmitter.start()
 
-    rx.join()
-    tx.join()
+    receiver.join()
+    transmitter.join()
 
 
 if __name__ == "__main__":
 
     queue = Queue()
-    run_test(queue)
+    main(queue)
 
     try:
         pass
